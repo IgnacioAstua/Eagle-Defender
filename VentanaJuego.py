@@ -1,8 +1,11 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk #pip install pillow
+import pygame
 import time
 import threading
+import os
+import random
 
 # Variables
 size_area_juego = {"width":600,"height":600}
@@ -13,12 +16,15 @@ colocar_bloques = True
 
 
 # Ventana Principal
-def ventanaJuego(ventanaPrincipal):
-	# ventana_juego = tk.Tk()
+def ventanaJuego(ventanaPrincipal, usr1, usr2):
 
-	# ventana_juego.geometry('1550x800')
-	# ventana_juego.title("Eagle Defender")
-	# ventana_juego.configure(bg = "gray")
+	path = "./musica"
+	all_mp3 = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.mp3')]
+
+	random_song = random.choice(all_mp3)
+	# musica fondo
+	pygame.mixer.init()
+	pygame.mixer.Channel(0).play(pygame.mixer.Sound(random_song), loops=-1)
 
 	# Contiene los bloque, cronometro y area de juego
 	canva_juego = tk.Canvas(ventanaPrincipal, width = 1550, height = 800)
@@ -28,6 +34,7 @@ def ventanaJuego(ventanaPrincipal):
 	area_juego = tk.Canvas(ventanaPrincipal, width = size_area_juego["width"], height = size_area_juego["height"], bg = "#2a2a2a", highlightthickness=0)
 	area_juego.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
+	# Fondo de pantalla
 	img_fondo = Image.open("./fondo2.png")
 	resize_image = img_fondo.resize((1700,900))
 	imgF = ImageTk.PhotoImage(resize_image)
@@ -35,6 +42,57 @@ def ventanaJuego(ventanaPrincipal):
 	fondoJ = tk.Label(canva_juego, image = imgF)
 	fondoJ.img_fondo = imgF
 	fondoJ.place(x=0, y=0)
+
+	#Jugador 1
+	with open('registro.txt', 'r') as archivo:
+			lineas = archivo.readlines()
+			for linea in lineas:
+				datos = linea.strip().split(',')
+				#Prueba
+				if datos[0] == usr1:
+					jugador1 = tk.Label (canva_juego, text = datos[0], font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+					jugador1.place(x=200, y=100)
+					imgJ1 = Image.open(datos[5])
+					resize_imgJ1 = imgJ1.resize((50,50))
+					imgJ1 = ImageTk.PhotoImage(resize_imgJ1)
+
+					label_imgJ1 = tk.Label(canva_juego, image = imgJ1, height=50, width=50, borderwidth=0, highlightthickness=0)
+					label_imgJ1.imgJ1 = imgJ1
+					label_imgJ1.place(x=150, y=100)
+
+				elif datos[0] == usr2:
+					jugador2 = tk.Label (canva_juego, text = datos[0], font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+					jugador2.place(x=1200, y=100)
+					imgJ2 = Image.open(datos[5])
+					resize_imgJ2 = imgJ2.resize((50,50))
+					imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
+
+					label_imgJ2 = tk.Label(canva_juego, image = imgJ2, height=50, width=50, borderwidth=0, highlightthickness=0)
+					label_imgJ2.imgJ2 = imgJ2
+					label_imgJ2.place(x=1150, y=100)
+				# elif:
+				# 	jugador2 = tk.Label (canva_juego, text = "Jugador", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+				# 	jugador2.place(x=200, y=100)
+				# 	imgJ2 = Image.open(datos[5])
+				# 	resize_imgJ2 = imgJ2.resize((50,50))
+				# 	imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
+
+				# 	label_imgJ2 = tk.Label(canva_juego, image = imgJ2, height=50, width=50, borderwidth=0, highlightthickness=0)
+				# 	label_imgJ2.imgJ2 = imgJ2
+				# 	label_imgJ2.place(x=150, y=100)
+
+
+	#Jugador 2
+	# jugador2 = tk.Label (canva_juego, text = "Jugador 2", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+	# jugador2.place(x=1200, y=100)
+	# imgJ2 = Image.open("./perfil_placeholder.png")
+	# resize_imgJ2 = imgJ2.resize((50,50))
+	# imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
+
+	# label_imgJ2 = tk.Label(canva_juego, image = imgJ2, height=50, width=50, borderwidth=0, highlightthickness=0)
+	# label_imgJ2.imgJ2 = imgJ2
+	# label_imgJ2.place(x=1150, y=100)
+
 
 	# Imagen de bloques de madera
 	img_madera = Image.open("./madera.png")
@@ -97,13 +155,12 @@ def ventanaJuego(ventanaPrincipal):
 			)
 			fila.append(cuadro)
 		matriz_cuadros.append(fila)
-	# for i in matriz_cuadros:
-	# 	print(i)
+
 
 
 
 	def onclick(event):
-		global madera#, colocar_bloques
+		global madera
 		
 		if madera > 0 and colocar_bloques:
 			item = area_juego.find_closest(event.x, event.y)
@@ -132,23 +189,14 @@ def ventanaJuego(ventanaPrincipal):
 		else:
 			messagebox.showinfo(title="Sin madera", message="Ya no tiene más bloques de madera")
 
-
-			
-			
-			 
-
-		
-
-
 	area_juego.bind("<Button-1>", onclick)
 
-	def iniciar_juego():
-		# https://stackoverflow.com/questions/63251775/how-to-delete-and-recreate-a-canvas-tkinter-canvas
-		canva_juego.destroy()
-		ventanaJuego(ventanaPrincipal)
+	# def iniciar_juego():
+	# 	#
+	# 	canva_juego.destroy()
+	# 	ventanaJuego(ventanaPrincipal)
 
 
 
 
 
-	# ventanaPrincipal.mainloop()

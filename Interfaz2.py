@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from VentanaJuego import ventanaJuego
 from PIL import Image, ImageTk #pip install pillow
+import pygame
 #Ventana Pricipal
 ventana1 = tk.Tk()
 
@@ -17,20 +18,30 @@ fondo1 = tk.PhotoImage(file = "fondo1.png")
 fondoP = tk.Label(canva1, image = fondo1)
 fondoP.place(x=0, y=0)
 
+#Variables globales para rutas de archivos y nombres de usuario
+ruta_foto = ""
+ruta_cancion = ""
+usr1 = ""
+usr2 = ""
+
 #Función para subir la foto
 def seleccionar_foto():
 	foto_path = filedialog.askopenfilename(filetypes=[("Archivos PNG", "*.png")])
 	# Aquí se podría asignar la ruta a una variable o algo así
+	global ruta_foto
 	if foto_path:
 		#Ver la ruta
 		print("Ruta de la foto:", foto_path)
+	ruta_foto = foto_path
 
 def seleccionar_cancion():
 	cancion_path = filedialog.askopenfilename(filetypes=[("Archivos MP#", "*.mp3")])
 	# Aquí se podría asignar la ruta a una variable o algo así
+	global ruta_cancion
 	if cancion_path:
 		#Ver la ruta
 		print("Ruta de la cancion:", cancion_path)
+	ruta_cancion = cancion_path
 
 #Verifica el usuario y si está registrado
 def validacion_inicio_sesion():
@@ -44,13 +55,40 @@ def validacion_inicio_sesion():
 			lineas = archivo.readlines()
 			for linea in lineas:
 				datos = linea.strip().split(',')
-				if len(datos) == 5 and datos[0] == nombre_usuario and datos[3] == contrasena:
+				if (len(datos) == 5 or len(datos) == 7) and datos[0] == nombre_usuario and datos[3] == contrasena:
 					#Prueba
 					if jugador1.cget("text") == "Jugador 1":
+
+						# Cambia el placeholder "Jugador 1" por el nombre de usuario del jugador
 						jugador1.configure(text=nombre_usuario)
+
+						#Muestra la foto de perfil junto al nombre de usuario
+						imgJ1 = Image.open(datos[5])
+						resize_imgJ1 = imgJ1.resize((50,50))
+						imgJ1 = ImageTk.PhotoImage(resize_imgJ1)
+						label_imgJ1.imgJ1 = imgJ1
+						label_imgJ1.configure(image=imgJ1)
+
+						#para poder pasar los nombre de usuario a la pantalla de juego
+						global usr1
+						usr1 = nombre_usuario
+
 						messagebox.showinfo("Completado", "Inicio de sesión exitoso.")
 					elif jugador1.cget("text") != "Jugador 1" and jugador2.cget("text") == "Jugador 2":
+						# Cambia el placeholder "Jugador 1" por el nombre de usuario del jugador
 						jugador2.configure(text=nombre_usuario)
+
+						#Muestra la foto de perfil junto al nombre de usuario
+						imgJ2 = Image.open(datos[5])
+						resize_imgJ2 = imgJ2.resize((50,50))
+						imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
+						label_imgJ2.imgJ2 = imgJ2
+						label_imgJ2.configure(image=imgJ2)
+
+						#para poder pasar los nombre de usuario a la pantalla de juego
+						global usr2
+						usr2 = nombre_usuario
+
 						messagebox.showinfo("Completado", "Inicio de sesión exitoso.")
 					else:
 						messagebox.showerror("Error", "Ya hay dos usuarios que iniciaron sesión")
@@ -92,10 +130,14 @@ def registro_usuario():
 		# Guardar los datos en un archivo de texto llamado 'registro.txt'
 		with open('registro.txt', 'a') as archivo:
 			# Escribir los datos en el archivo separados por comas
-			archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad}\n")
+			archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
 
 			messagebox.showinfo("¡Felicidades!", "Registro completado con éxito.")
-			return
+
+			registro.destroy()
+			inicio_sesion.pack(side=tk.TOP, pady=50)
+
+		return
 
 
 		# Leer y mostrar el contenido del archivo en la consola (solo para comprobar)
@@ -181,11 +223,27 @@ tituloP.place(x=500, y=70)
 
 #Jugador 1
 jugador1 = tk.Label (canva1, text = "Jugador 1", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
-jugador1.place(x=150, y=100)
+jugador1.place(x=200, y=100)
+imgJ1 = Image.open("./perfil_placeholder.png")
+resize_imgJ1 = imgJ1.resize((50,50))
+imgJ1 = ImageTk.PhotoImage(resize_imgJ1)
+
+label_imgJ1 = tk.Label(canva1, image = imgJ1, height=50, width=50, borderwidth=0, highlightthickness=0)
+label_imgJ1.imgJ1 = imgJ1
+label_imgJ1.place(x=150, y=100)
+
 #Jugador 2
 jugador2 = tk.Label (canva1, text = "Jugador 2", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
-jugador2.place(x=1150, y=100)
+jugador2.place(x=1200, y=100)
+imgJ2 = Image.open("./perfil_placeholder.png")
+resize_imgJ2 = imgJ2.resize((50,50))
+imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
 
+label_imgJ2 = tk.Label(canva1, image = imgJ2, height=50, width=50, borderwidth=0, highlightthickness=0)
+label_imgJ2.imgJ2 = imgJ2
+label_imgJ2.place(x=1150, y=100)
+
+# Boton para ir a la pantalla de juego
 jugar = tk.Button(canva1, text='Iniciar Juego', font= 'Fixedsys 25',bg='grey', fg='black', command = lambda: iniciar_juego())
 jugar.place(x=618, y=225)
 
@@ -217,14 +275,22 @@ salir_ajustes.place(x=10,y=10)
 salirP=tk.Button(canva1, text = "Salir", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: ventana1.destroy())
 salirP.place(x=95,y=30)
 
+#jugar sin iniciar sesion
+salirP=tk.Button(canva1, text = "Jugar rapido", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: jugar_rapido())
+salirP.place(x=150,y=30)
+
 
 def iniciar_juego():
 	# https://stackoverflow.com/questions/63251775/how-to-delete-and-recreate-a-canvas-tkinter-canvas
 	if jugador1.cget("text") != "Jugador 1" and jugador2.cget("text") != "Jugador 2":
 		canva1.destroy()
-		ventanaJuego(ventana1)
+		ventanaJuego(ventana1, usr1, usr2)
 	else:
 		messagebox.showerror("Error", "Dos jugadores deben haber iniciado sesión para iniciar el juego.")
+def jugar_rapido():
+	canva1.destroy()
+	ventanaJuego(ventana1, "Jugador 1", "Jugador 2")
+
 
 
 
