@@ -1,0 +1,2 @@
+## Importaciones
+pip install pillow
