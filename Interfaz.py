@@ -127,5 +127,4 @@ salirP.place(x=20,y=10)
 
 
 
-
 ventana1.mainloop()
