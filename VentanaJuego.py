@@ -7,7 +7,7 @@ import threading
 # Variables
 size_area_juego = {"width":600,"height":600}
 matriz_cuadros = []
-minutos, segundos = 0, 10
+minutos, segundos = 1, 30
 madera = 10
 colocar_bloques = True
 

@@ -44,7 +44,14 @@ def validacion_inicio_sesion():
                 datos = linea.strip().split(',')
                 if len(datos) == 5 and datos[0] == nombre_usuario and datos[3] == contrasena:
                     #Prueba
-                    messagebox.showinfo("Completado", "Inicio de sesión exitoso.")
+                    if jugador1.cget("text") == "Jugador 1":
+                        jugador1.configure(text=nombre_usuario)
+                        messagebox.showinfo("Completado", "Inicio de sesión exitoso.")
+                    elif jugador1.cget("text") != "Jugador 1" and jugador2.cget("text") == "Jugador 2":
+                        jugador2.configure(text=nombre_usuario)
+                        messagebox.showinfo("Completado", "Inicio de sesión exitoso.")
+                    else:
+                        messagebox.showerror("Error", "Ya hay dos usuarios que iniciaron sesión")
                     return
 
         # Si no se encontró una coincidencia, imprimir "Usuario no existente"(prueba)
@@ -168,7 +175,14 @@ mejores_txt.place(x=165, y=20)
 
 #Titulo principal
 tituloP = tk.Label (canva1, text = "Eagle Defender", font = "Fixedsys 80 ",bg= "grey", fg='black', relief= 'raised')
-tituloP.place(x=430, y=100)
+tituloP.place(x=500, y=100)
+
+#Jugador 1
+jugador1 = tk.Label (canva1, text = "Jugador 1", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+jugador1.place(x=150, y=100)
+#Jugador 2
+jugador2 = tk.Label (canva1, text = "Jugador 2", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+jugador2.place(x=1150, y=100)
 
 #Boton de inicio de sesion
 iniciar = tk.Button(canva1, text='Iniciar Sesión', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: inicio_sesion.pack(side=tk.TOP, pady=50))
