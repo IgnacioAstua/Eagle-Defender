@@ -124,18 +124,73 @@ def registro_usuario():
 	correo = entrada_correo.get()
 	contrasena = entrada_contrasena.get()
 	edad = entrada_edad.get()
+	global ruta_foto
+	global ruta_cancion
 
 	if nickname and nombre and correo and contrasena and edad:
 
 		# Guardar los datos en un archivo de texto llamado 'registro.txt'
-		with open('registro.txt', 'a') as archivo:
-			# Escribir los datos en el archivo separados por comas
-			archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
+		with open('registro.txt', 'r+') as archivo:
+			# Revisa que no haya usuarios registrados con el mismo nombre o correo
+			lineas = archivo.readlines()
+			usuario_no_registrado = True
+			for linea in lineas:
+				datos = linea.strip().split(',')
+				if datos[0] == nickname:
+					messagebox.showerror("Error", "Nombre de usuario está en uso.")
+					usuario_no_registrado = False
+					return usuario_no_registrado
+				elif datos[2] == correo:
+					messagebox.showerror("Error", "Correo está vinculado a otro usuario.")
+					usuario_no_registrado = False
+					return usuario_no_registrado
+			if usuario_no_registrado:
 
-			messagebox.showinfo("¡Felicidades!", "Registro completado con éxito.")
+				# Si el ususario no agrega foto o canción, se usarán valores por defecto
+				if ruta_foto == "" and ruta_cancion == "":
+					msj = messagebox.askquestion("Sin foto ni canción", "No se agregó foto ni canción.\nSe agregarán una foto y canción por defecto.\n¿Desea continuar?")
+					if msj == "yes":
+						ruta_foto = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/perfil_placeholder.png"
+						ruta_cancion = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/winner_default.mp3"
+						# Escribir los datos en el archivo separados por comas
+						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
+						messagebox.showinfo("Registro exitoso.", "Se registró sin foto ni canción personalizada.")
+					else:
+						messagebox.showinfo("No registrado.", "Se canceló el registro.")
 
-			registro.destroy()
-			inicio_sesion.pack(side=tk.TOP, pady=50)
+
+				elif ruta_foto == "":
+					msj = messagebox.askquestion("Sin foto.", "No se agregó foto.\nSe agregarán una foto por defecto.\n¿Desea continuar?")
+					if msj == "yes":
+						ruta_foto = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/perfil_placeholder.png"
+						# Escribir los datos en el archivo separados por comas
+						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
+						messagebox.showinfo("Registro exitoso.", "Se registró sin foto personalizada.")
+					else:
+						messagebox.showinfo("No registrado.", "Se canceló el registro.")
+				elif ruta_cancion == "":
+					
+					msj = messagebox.askquestion("Sin canción.", "No se agregó canción.\nSe agregarán una canción por defecto.\n¿Desea continuar?")
+					if msj == "yes":
+						ruta_cancion = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/winner_default.mp3"
+						# Escribir los datos en el archivo separados por comas
+						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
+						messagebox.showinfo("Registro exitoso.", "Se registró sin canción personalizada.")
+					else:
+						messagebox.showinfo("No registrado.", "Se canceló el registro.")
+				else:
+					# Escribir los datos en el archivo separados por comas
+					archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
+					messagebox.showinfo("Registro exitoso.", "Se registró completado con éxito.")
+
+
+
+			ruta_foto = ""
+			ruta_cancion = ""
+
+
+		registro.pack_forget()
+		inicio_sesion.pack(side=tk.TOP, pady=50)
 
 		return
 
@@ -276,8 +331,8 @@ salirP=tk.Button(canva1, text = "Salir", font = "Fixedsys 16",bg='grey', fg='bla
 salirP.place(x=95,y=30)
 
 #jugar sin iniciar sesion
-salirP=tk.Button(canva1, text = "Jugar rapido", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: jugar_rapido())
-salirP.place(x=150,y=30)
+juegarR=tk.Button(canva1, text = "Jugar rapido", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: jugar_rapido())
+juegarR.place(x=150,y=30)
 
 
 def iniciar_juego():
