@@ -21,8 +21,8 @@ fondoP.place(x=0, y=0)
 #Variables globales para rutas de archivos y nombres de usuario
 ruta_foto = ""
 ruta_cancion = ""
-usr1 = ""
-usr2 = ""
+usr1 = ["Jugador 1","","","","","./perfil_placeholder.png","./winner_default.mp3"]
+usr2 = ["Jugador 2","","","","","./perfil_placeholder.png","./winner_default.mp3"]
 
 #Función para subir la foto
 def seleccionar_foto():
@@ -71,7 +71,7 @@ def validacion_inicio_sesion():
 
 						#para poder pasar los nombre de usuario a la pantalla de juego
 						global usr1
-						usr1 = nombre_usuario
+						usr1 = datos
 
 						messagebox.showinfo("Completado", "Inicio de sesión exitoso.")
 					elif jugador1.cget("text") != "Jugador 1" and jugador2.cget("text") == "Jugador 2":
@@ -87,7 +87,7 @@ def validacion_inicio_sesion():
 
 						#para poder pasar los nombre de usuario a la pantalla de juego
 						global usr2
-						usr2 = nombre_usuario
+						usr2 = datos
 
 						messagebox.showinfo("Completado", "Inicio de sesión exitoso.")
 					else:
@@ -150,8 +150,8 @@ def registro_usuario():
 				if ruta_foto == "" and ruta_cancion == "":
 					msj = messagebox.askquestion("Sin foto ni canción", "No se agregó foto ni canción.\nSe agregarán una foto y canción por defecto.\n¿Desea continuar?")
 					if msj == "yes":
-						ruta_foto = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/perfil_placeholder.png"
-						ruta_cancion = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/winner_default.mp3"
+						ruta_foto = "./perfil_placeholder.png"
+						ruta_cancion = "./winner_default.mp3"
 						# Escribir los datos en el archivo separados por comas
 						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
 						messagebox.showinfo("Registro exitoso.", "Se registró sin foto ni canción personalizada.")
@@ -162,7 +162,7 @@ def registro_usuario():
 				elif ruta_foto == "":
 					msj = messagebox.askquestion("Sin foto.", "No se agregó foto.\nSe agregarán una foto por defecto.\n¿Desea continuar?")
 					if msj == "yes":
-						ruta_foto = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/perfil_placeholder.png"
+						ruta_foto = "./perfil_placeholder.png"
 						# Escribir los datos en el archivo separados por comas
 						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
 						messagebox.showinfo("Registro exitoso.", "Se registró sin foto personalizada.")
@@ -172,7 +172,7 @@ def registro_usuario():
 					
 					msj = messagebox.askquestion("Sin canción.", "No se agregó canción.\nSe agregarán una canción por defecto.\n¿Desea continuar?")
 					if msj == "yes":
-						ruta_cancion = "C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/winner_default.mp3"
+						ruta_cancion = "./winner_default.mp3"
 						# Escribir los datos en el archivo separados por comas
 						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
 						messagebox.showinfo("Registro exitoso.", "Se registró sin canción personalizada.")
@@ -299,8 +299,8 @@ label_imgJ2.imgJ2 = imgJ2
 label_imgJ2.place(x=1150, y=100)
 
 # Boton para ir a la pantalla de juego
-jugar = tk.Button(canva1, text='Iniciar Juego', font= 'Fixedsys 25',bg='grey', fg='black', command = lambda: iniciar_juego())
-jugar.place(x=618, y=225)
+iniciar_juego = tk.Button(canva1, text='Iniciar Juego', font= 'Fixedsys 25',bg='grey', fg='black', command = lambda: iniciarJuego())
+iniciar_juego.place(x=618, y=225)
 
 #Boton de inicio de sesion
 iniciar = tk.Button(canva1, text='Iniciar Sesión', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: inicio_sesion.pack(side=tk.TOP, pady=50))
@@ -331,17 +331,80 @@ salirP=tk.Button(canva1, text = "Salir", font = "Fixedsys 16",bg='grey', fg='bla
 salirP.place(x=95,y=30)
 
 #jugar sin iniciar sesion
-juegarR=tk.Button(canva1, text = "Jugar rapido", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: jugar_rapido())
-juegarR.place(x=150,y=30)
+jugarR=tk.Button(canva1, text = "Jugar rapido", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: jugar_rapido())
+jugarR.place(x=150,y=30)
+
+#Ventana de inicio de sesion
+select_rol = tk.Canvas(ventana1, width=900, height=563)
+fondo_select_rol = tk.Label(select_rol, image= fondo2)
+fondo_select_rol.place(x=0, y=0)
+titulo_select = tk.Label(select_rol, text='Elija quién será el atacante:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
+titulo_select.place(x=105, y=100)
 
 
-def iniciar_juego():
-	# https://stackoverflow.com/questions/63251775/how-to-delete-and-recreate-a-canvas-tkinter-canvas
+
+btn_jugar = tk.Button(select_rol, text='Jugar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: jugar())
+btn_jugar.place(x=400, y=450)
+
+# select_rol_btn = tk.Button(canva1, text='Iniciar Sesión', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: inicio_sesion.pack(side=tk.TOP, pady=50))
+# select_rol_btn.place(x=605, y=325)
+salir_select_rol = tk.Button(select_rol, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: select_rol.pack_forget())
+salir_select_rol.place(x=10, y=10)
+
+var_rol = tk.IntVar()
+
+#Jugador 1
+jugador1_rol = tk.Radiobutton (select_rol, text = usr1[0], variable=var_rol, selectcolor="#a27272", indicatoron=0,value=0,font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+jugador1_rol.place(x=360, y=210)
+imgJ1_rol = Image.open(usr1[5])
+resize_imgJ1_rol = imgJ1_rol.resize((50,50))
+imgJ1_rol = ImageTk.PhotoImage(resize_imgJ1_rol)
+
+label_imgJ1_rol = tk.Radiobutton(select_rol, image = imgJ1_rol, variable=var_rol, selectcolor="#a27272", indicatoron=0,value=0,height=59, width=59, borderwidth=0, highlightthickness=0)
+label_imgJ1_rol.imgJ1_rol = imgJ1_rol
+label_imgJ1_rol.place(x=300, y=210)
+
+#Jugador 2
+jugador2_rol = tk.Radiobutton (select_rol, text = usr2[0], variable=var_rol, selectcolor="#a27272", indicatoron=0,value=1,font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
+jugador2_rol.place(x=360, y=280)
+imgJ2_rol = Image.open(usr2[5])
+resize_imgJ2_rol = imgJ2_rol.resize((50,50))
+imgJ2_rol = ImageTk.PhotoImage(resize_imgJ2_rol)
+
+label_imgJ2_rol = tk.Radiobutton(select_rol, image = imgJ2_rol, variable=var_rol, selectcolor="#a27272", indicatoron=0,value=1,height=59, width=59, borderwidth=0, highlightthickness=0)
+label_imgJ2_rol.imgJ2_rol = imgJ2_rol
+label_imgJ2_rol.place(x=300, y=280)
+
+def iniciarJuego():
 	if jugador1.cget("text") != "Jugador 1" and jugador2.cget("text") != "Jugador 2":
-		canva1.destroy()
-		ventanaJuego(ventana1, usr1, usr2)
+
+		select_rol.pack(side=tk.TOP, pady=50)
+		jugador1_rol.configure(text=usr1[0])
+
+		#Muestra la foto de perfil junto al nombre de usuario
+		imgJ1_rol = Image.open(usr1[5])
+		resize_imgJ1_rol = imgJ1_rol.resize((50,50))
+		imgJ1_rol = ImageTk.PhotoImage(resize_imgJ1_rol)
+		label_imgJ1_rol.imgJ1_rol = imgJ1_rol
+		label_imgJ1_rol.configure(image=imgJ1_rol)
+
+
+		jugador2_rol.configure(text=usr2[0])
+
+		#Muestra la foto de perfil junto al nombre de usuario
+		imgJ2_rol = Image.open(usr2[5])
+		resize_imgJ2_rol = imgJ2_rol.resize((50,50))
+		imgJ2_rol = ImageTk.PhotoImage(resize_imgJ2_rol)
+		label_imgJ2_rol.imgJ2_rol = imgJ2_rol
+		label_imgJ2_rol.configure(image=imgJ2_rol)
+
 	else:
 		messagebox.showerror("Error", "Dos jugadores deben haber iniciado sesión para iniciar el juego.")
+
+def jugar():
+	canva1.destroy()
+	ventanaJuego(ventana1, usr1[0], usr2[0])
+
 def jugar_rapido():
 	canva1.destroy()
 	ventanaJuego(ventana1, "Jugador 1", "Jugador 2")
@@ -353,5 +416,5 @@ def jugar_rapido():
 
 
 
-
+#jugar_rapido()
 ventana1.mainloop()
