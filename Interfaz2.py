@@ -274,7 +274,7 @@ mejores_txt.place(x=165, y=20)
 
 #Titulo principal
 tituloP = tk.Label (canva1, text = "Eagle Defender", font = "Fixedsys 80 ",bg= "grey", fg='black', relief= 'raised')
-tituloP.place(x=500, y=70)
+tituloP.place(relx=0.5, y=70, anchor=tk.N)
 
 #Jugador 1
 jugador1 = tk.Label (canva1, text = "Jugador 1", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
@@ -300,29 +300,29 @@ label_imgJ2.place(x=1150, y=100)
 
 # Boton para ir a la pantalla de juego
 iniciar_juego = tk.Button(canva1, text='Iniciar Juego', font= 'Fixedsys 25',bg='grey', fg='black', command = lambda: iniciarJuego())
-iniciar_juego.place(x=618, y=225)
+iniciar_juego.place(relx=0.5, y=225, anchor=tk.N)
 
 #Boton de inicio de sesion
 iniciar = tk.Button(canva1, text='Iniciar Sesión', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: inicio_sesion.pack(side=tk.TOP, pady=50))
-iniciar.place(x=605, y=325)
+iniciar.place(relx=0.5, y=325, anchor=tk.N)
 salir_inicio = tk.Button(inicio_sesion, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: inicio_sesion.pack_forget())
 salir_inicio.place(x=10, y=10)
 
 #Boton de registro
 registrarse = tk.Button(canva1, text= 'Registrarse', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: registro.pack(side=tk.TOP, pady=50))
-registrarse.place(x=640, y=425)
+registrarse.place(relx=0.5, y=425, anchor=tk.N)
 salir_registro = tk.Button(registro, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: registro.pack_forget())
 salir_registro.place(x=10, y=10)
 
 #Boton salon de la fama
 salon_fama = tk.Button(canva1, text='Salón de la fama', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: salon_canva.pack(side=tk.TOP, pady=100))
-salon_fama.place(x=590, y=525)
+salon_fama.place(relx=0.5, y=525, anchor=tk.N)
 salir_salon = tk.Button(salon_canva, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: salon_canva.pack_forget())
 salir_salon.place(x=10, y=10)
 
 #Boton de ajustes
 ajust=tk.Button(canva1, text ="Ajustes", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: ajustes_canva.pack(side= tk.TOP, pady=50))
-ajust.place(x=680, y=625)
+ajust.place(relx=0.5, y=625, anchor=tk.N)
 salir_ajustes=tk.Button(ajustes_canva, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: ajustes_canva.pack_forget())
 salir_ajustes.place(x=10,y=10)
 
@@ -346,8 +346,6 @@ titulo_select.place(x=105, y=100)
 btn_jugar = tk.Button(select_rol, text='Jugar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: jugar())
 btn_jugar.place(x=400, y=450)
 
-# select_rol_btn = tk.Button(canva1, text='Iniciar Sesión', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: inicio_sesion.pack(side=tk.TOP, pady=50))
-# select_rol_btn.place(x=605, y=325)
 salir_select_rol = tk.Button(select_rol, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: select_rol.pack_forget())
 salir_select_rol.place(x=10, y=10)
 
@@ -403,11 +401,17 @@ def iniciarJuego():
 
 def jugar():
 	canva1.destroy()
-	ventanaJuego(ventana1, usr1[0], usr2[0])
+	rol = {"atacante":"", "defensor":""}
+	if var_rol.get() == 0:
+		rol["atacante"], rol["defensor"] = usr1[0], usr2[0]
+	else:
+		rol["atacante"], rol["defensor"] = usr2[0], usr1[0]
+	ventanaJuego(ventana1, usr1[0], usr2[0], rol)
 
 def jugar_rapido():
 	canva1.destroy()
-	ventanaJuego(ventana1, "Jugador 1", "Jugador 2")
+	rol = {"atacante":"Jugador 1", "defensor":"Jugador 2"}
+	ventanaJuego(ventana1, "Jugador 1", "Jugador 2", rol)
 
 
 
