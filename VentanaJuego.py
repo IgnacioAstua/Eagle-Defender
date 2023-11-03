@@ -33,10 +33,10 @@ x_tanque = 286
 y_tanque = 15
 # Dirección actual del círculo
 direccion_tanque = 'down'
-turno_atacante = True
+turno_atacante = False
 puntos = 0
 th = False
-regresando_inicio = False
+detener_cronometro = False
 
 
 # Ventana Principal
@@ -77,15 +77,19 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	volver_inicio.place(x=100,y=30)
 
 	def ir_a_inicio():
-		global regresando_inicio, th, minutos, segundos
+		global detener_cronometro, th, minutos, segundos, colocar_bloques,x_tanque,y_tanque, puntos
 		th = threading.Thread(target=cronometro)
-		regresando_inicio = True
+		detener_cronometro = True
+		colocar_bloques = True
+		x_tanque = 286
+		y_tanque = 15
 		canva_juego.destroy()
 		canva1.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 		pygame.mixer.quit()
 		time.sleep(1.1)
 		minutos, segundos = 1, 30
-		regresando_inicio = False
+		detener_cronometro = False
+		puntos = 0
 
 	# area de juego donde se van a colocar y los bloques
 	area_juego = tk.Canvas(canva_juego, width = size_area_juego["width"], height = size_area_juego["height"], 
@@ -167,10 +171,10 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 	# La lista vacía en la posicion 4 de cada bloque se remplazará con la referencia al bloque en el inventario
 	bloques = [
-		["madera",	10,	(200, 350),	"./madera.png"	,[]	],
-		["concreto",10,	(256, 350), 	"./concreto.png",[]	],
-		["acero", 	10,	(312, 350), 	"./acero.png"	,[]	],
-		["aguila", 	1,	(368, 350), 	"./eagle.png"	,[]	],
+		["madera",	10,	(160, 350),	"./madera.png"	,[]	],
+		["concreto",10,	(216, 350), 	"./concreto.png",[]	],
+		["acero", 	10,	(272, 350), 	"./acero.png"	,[]	],
+		["aguila", 	1,	(328, 350), 	"./eagle.png"	,[]	],
 	]
 
 	destruidos = {
@@ -183,7 +187,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	var = tk.IntVar() # Usado para guardar el valor de el Radiobutton seleccionado
 
 	label_inventario = tk.Label(canva_juego, text="Inventario", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
-	label_inventario.place(x=200, y=270)
+	label_inventario.place(x=160, y=270)
 	for bloque in bloques:
 		img_bloque = Image.open(bloque[3]) 
 		resize_image = img_bloque.resize((50,50)) # ajusta tamaño de imagen
@@ -322,7 +326,6 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 				bloques[3][1]+=1
 				bloques[3][4][0].configure(text=bloques[3][1])
 				i = bloques_colocados["aguila"][1].index(label)
-				print(bloques[3][4][0], bloques_colocados["aguila"][1][i])
 				del bloques_colocados["aguila"][0][i] 
 				del bloques_colocados["aguila"][1][i] 
 			label.place_forget()
@@ -345,8 +348,8 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		global minutos, segundos, colocar_bloques
 
 
-		for i in range(minutos*60 + segundos):
-			if regresando_inicio:
+		while minutos*60 + segundos >= 0:
+			if detener_cronometro:
 				return
 			segundos-=1
 			if segundos >= 0:
@@ -363,7 +366,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 				if turno_atacante:
 					ventanaPrincipal.unbind("<Key>")
 					messagebox.showinfo("Sin tiempo.", "Fin del juego.")
-				return
+				break
 			else:
 				minutos-=1
 				segundos=59
@@ -384,7 +387,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 	dar_turno = tk.Button(canva_juego, text ="Turno Atacante", font ="Fixedsys 17", bg='grey', fg='black', command= lambda: turno_rol("atacante", turno_atacar))
 	#
-	dar_turno.place(x=200, y=500)
+	dar_turno.place(x=160, y=500)
 	
 	turno = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
 	def turno_rol(jugador, funcion):
@@ -410,7 +413,8 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		
 
 	def turno_atacar():
-		global th
+		global th, turno_atacante
+		turno_atacante = True
 		dar_turno.place_forget()
 		area_juego.unbind("<Button-1>")
 		ventanaPrincipal.bind("<Key>", manejar_evento_teclado)
@@ -430,9 +434,8 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		my_sound.set_volume(0.4)
 		# duración de la canción en segundos
 		duracion_cancion = pygame.mixer.Sound(random_song).get_length()
-		print(duracion_cancion)
 		global minutos, segundos
-		minutos, segundos = int(duracion_cancion//60), int(duracion_cancion%60 )#0, 30
+		minutos, segundos = int(duracion_cancion//60), int(duracion_cancion%60 )
 		label_crono.configure(text=f"{minutos}:{segundos}")
 		if not colocar_bloques:
 			th = threading.Thread(target=cronometro)

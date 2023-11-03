@@ -429,9 +429,10 @@ def jugar():
 	rol = {"atacante":"", "defensor":""}
 	if var_rol.get() == 0:
 		rol["atacante"], rol["defensor"] = usr1[0], usr2[0]
+		ventanaJuego(ventana1, usr2[0], usr1[0], rol, canva1)
 	else:
 		rol["atacante"], rol["defensor"] = usr2[0], usr1[0]
-	ventanaJuego(ventana1, usr1[0], usr2[0], rol, canva1)
+		ventanaJuego(ventana1, usr1[0], usr2[0], rol, canva1)
 
 def jugar_rapido():
 	canva1.place_forget()
