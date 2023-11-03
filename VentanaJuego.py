@@ -26,7 +26,7 @@ import random
 # Variables
 size_area_juego = {"width":600,"height":600}
 matriz_cuadros = []
-minutos, segundos = 0, 10
+minutos, segundos = 1, 30
 colocar_bloques = True
 # Variables de posición del círculo
 x_tanque = 286
@@ -35,10 +35,12 @@ y_tanque = 15
 direccion_tanque = 'down'
 turno_atacante = True
 puntos = 0
+th = False
+regresando_inicio = False
 
 
 # Ventana Principal
-def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
+def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 	#___________________
 	#					\ 1. Musica \___________________
@@ -60,6 +62,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
 	canva_juego = tk.Canvas(ventanaPrincipal, width = 1550, height = 800)
 	canva_juego.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
+
 	# Fondo de pantalla
 	img_fondo = Image.open("./fondo2.png")
 	resize_image = img_fondo.resize((1700,900))
@@ -68,6 +71,21 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
 	fondoJ = tk.Label(canva_juego, image = imgF)
 	fondoJ.img_fondo = imgF
 	fondoJ.place(x=0, y=0)
+
+	# volver a pantalla inicial
+	volver_inicio=tk.Button(canva_juego, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command=lambda:ir_a_inicio())
+	volver_inicio.place(x=100,y=30)
+
+	def ir_a_inicio():
+		global regresando_inicio, th, minutos, segundos
+		th = threading.Thread(target=cronometro)
+		regresando_inicio = True
+		canva_juego.destroy()
+		canva1.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+		pygame.mixer.quit()
+		time.sleep(1.1)
+		minutos, segundos = 1, 30
+		regresando_inicio = False
 
 	# area de juego donde se van a colocar y los bloques
 	area_juego = tk.Canvas(canva_juego, width = size_area_juego["width"], height = size_area_juego["height"], 
@@ -324,8 +342,12 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
 
 	# funcion que muestra cuenta regresiva
 	def cronometro():
-		global minutos, segundos, colocar_bloques	
+		global minutos, segundos, colocar_bloques
+
+
 		for i in range(minutos*60 + segundos):
+			if regresando_inicio:
+				return
 			segundos-=1
 			if segundos >= 0:
 				if segundos//10 == 0 and minutos//10 == 0:
@@ -337,6 +359,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
 				else:
 					label_crono.configure(text=f"{minutos}:{segundos}")
 			elif minutos <= 0 and segundos<=0:
+
 				if turno_atacante:
 					ventanaPrincipal.unbind("<Key>")
 					messagebox.showinfo("Sin tiempo.", "Fin del juego.")
@@ -380,12 +403,14 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
 			funcion()
 
 	def turno_defender():
+		global th
 		# Crea un thread separado para el cronometro
 		th = threading.Thread(target=cronometro)
 		th.start()
 		
 
 	def turno_atacar():
+		global th
 		dar_turno.place_forget()
 		area_juego.unbind("<Button-1>")
 		ventanaPrincipal.bind("<Key>", manejar_evento_teclado)
@@ -405,8 +430,9 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
 		my_sound.set_volume(0.4)
 		# duración de la canción en segundos
 		duracion_cancion = pygame.mixer.Sound(random_song).get_length()
+		print(duracion_cancion)
 		global minutos, segundos
-		minutos, segundos = int(duracion_cancion//60), int(duracion_cancion%60 )#1, 10
+		minutos, segundos = int(duracion_cancion//60), int(duracion_cancion%60 )#0, 30
 		label_crono.configure(text=f"{minutos}:{segundos}")
 		if not colocar_bloques:
 			th = threading.Thread(target=cronometro)
@@ -560,10 +586,10 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol):
 							puntos += 10
 							label_puntos.configure(text=f"Puntos:{puntos}")
 						elif elem == "concreto":
-							puntos += 25
+							puntos += 50
 							label_puntos.configure(text=f"Puntos:{puntos}")
 						elif elem == "acero":
-							puntos += 50
+							puntos += 25
 							label_puntos.configure(text=f"Puntos:{puntos}")
 						elif elem == "aguila":
 							puntos += 200

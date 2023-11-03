@@ -272,6 +272,21 @@ fondo_salon.place(x=0, y=0)
 mejores_txt = tk.Label(salon_canva, text= 'Mejores Puntuaciones', font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
 mejores_txt.place(x=165, y=20)
 
+#Ventana de ayuda
+text_controles = """W: mover tanque hacia arriba
+A: mover tanque hacia la izquierda
+S: mover tanque hacia abajo
+D: mover tanque hacia la derecha
+Espacio: disparar"""
+ayuda = tk.Canvas(ventana1, width=900, height=563)
+fondo_ayuda = tk.Label(ayuda, image= fondo2)
+fondo_ayuda.place(x=0, y=0)
+titulo_ayuda = tk.Label(ayuda, text='Controles de juego:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
+titulo_ayuda.place(relx=0.5, y=100, anchor=tk.CENTER)
+controles = tk.Label(ayuda, text=text_controles, font= 'Fixedsys 25', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
+controles.place(relx=0.5, y=200, anchor=tk.N)
+
+
 #Titulo principal
 tituloP = tk.Label (canva1, text = "Eagle Defender", font = "Fixedsys 80 ",bg= "grey", fg='black', relief= 'raised')
 tituloP.place(relx=0.5, y=70, anchor=tk.N)
@@ -326,6 +341,13 @@ ajust.place(relx=0.5, y=625, anchor=tk.N)
 salir_ajustes=tk.Button(ajustes_canva, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: ajustes_canva.pack_forget())
 salir_ajustes.place(x=10,y=10)
 
+
+#Boton de ayuda
+ayud = tk.Button(canva1, text ="Ayuda", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: ayuda.pack(side= tk.TOP, pady=50))
+ayud.place(relx=0.85, y=625, anchor=tk.N)
+salir_ayuda=tk.Button(ayuda, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: ayuda.pack_forget())
+salir_ayuda.place(x=10,y=10)
+
 #Boton de salida
 salirP=tk.Button(canva1, text = "Salir", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: ventana1.destroy())
 salirP.place(x=95,y=30)
@@ -340,6 +362,8 @@ fondo_select_rol = tk.Label(select_rol, image= fondo2)
 fondo_select_rol.place(x=0, y=0)
 titulo_select = tk.Label(select_rol, text='Elija quién será el atacante:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 titulo_select.place(x=105, y=100)
+
+
 
 
 
@@ -400,18 +424,19 @@ def iniciarJuego():
 		messagebox.showerror("Error", "Dos jugadores deben haber iniciado sesión para iniciar el juego.")
 
 def jugar():
-	canva1.destroy()
+	canva1.place_forget()
+	select_rol.pack_forget()
 	rol = {"atacante":"", "defensor":""}
 	if var_rol.get() == 0:
 		rol["atacante"], rol["defensor"] = usr1[0], usr2[0]
 	else:
 		rol["atacante"], rol["defensor"] = usr2[0], usr1[0]
-	ventanaJuego(ventana1, usr1[0], usr2[0], rol)
+	ventanaJuego(ventana1, usr1[0], usr2[0], rol, canva1)
 
 def jugar_rapido():
-	canva1.destroy()
+	canva1.place_forget()
 	rol = {"atacante":"Jugador 1", "defensor":"Jugador 2"}
-	ventanaJuego(ventana1, "Jugador 1", "Jugador 2", rol)
+	ventanaJuego(ventana1, "Jugador 1", "Jugador 2", rol, canva1)
 
 
 
