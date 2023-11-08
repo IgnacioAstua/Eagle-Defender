@@ -136,7 +136,11 @@ def registro_usuario():
 			usuario_no_registrado = True
 			for linea in lineas:
 				datos = linea.strip().split(',')
-				if datos[0] == nickname:
+				if datos[2] == correo and datos[0] == nickname:
+					messagebox.showerror("Error", "Nombre de usuario y correo en uso.")
+					usuario_no_registrado = False
+					return usuario_no_registrado
+				elif datos[0] == nickname:
 					messagebox.showerror("Error", "Nombre de usuario está en uso.")
 					usuario_no_registrado = False
 					return usuario_no_registrado

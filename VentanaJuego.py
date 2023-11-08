@@ -36,7 +36,10 @@ direccion_tanque = 'down'
 turno_atacante = False
 puntos = 0
 th = False
-detener_cronometro = False
+pausar_cronometro = False
+# Bandera para saber si hay una bomba en la pantalla
+bomba_en_movimiento = False
+
 
 
 # Ventana Principal
@@ -73,13 +76,43 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	fondoJ.place(x=0, y=0)
 
 	# volver a pantalla inicial
-	volver_inicio=tk.Button(canva_juego, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command=lambda:ir_a_inicio())
-	volver_inicio.place(x=100,y=30)
+
+	#boton para pausar en la pantalla de juego
+	pausar=tk.Button(canva_juego, text= 'Pausa', font= 'Fixedsys 16', bg='grey',fg='black', command=lambda:pausar_juego())
+	pausar.place(x=100,y=30)
+
+	def continuar_juego(pausa):
+		global pausar_cronometro
+		pausar_cronometro = False
+		pausa.place_forget()
+		pausar.configure(state=tk.NORMAL)
+
+
+	def pausar_juego():
+		global pausar_cronometro
+		pausar_cronometro = True
+		pausar.configure(state=tk.DISABLED)
+		# ventana de pausa
+		pausa = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
+		pausa.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+
+		volver_inicio=tk.Button(pausa, text= 'Volver a inicio', font= 'Fixedsys 20', bg='grey',fg='black', command=lambda:ir_a_inicio())
+		volver_inicio.place(relx=0.5, y=100, anchor=tk.CENTER )
+		
+		# titulo_turno = tk.Label(turno, text=f'Turno de: {rol[jugador]}',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
+		# titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
+
+		# btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: turno.place_forget())
+		# btn_aceptar.place(relx=0.5, y=200, anchor=tk.CENTER )
+
+		continuar=tk.Button(pausa, text= 'Continuar partida', font= 'Fixedsys 20', bg='grey',fg='black', command=lambda:continuar_juego(pausa))
+		continuar.place(relx=0.5, y=200, anchor=tk.CENTER )
 
 	def ir_a_inicio():
-		global detener_cronometro, th, minutos, segundos, colocar_bloques,x_tanque,y_tanque, puntos
+		global pausar_cronometro, th, minutos, segundos, colocar_bloques,x_tanque,y_tanque, puntos
 		th = threading.Thread(target=cronometro)
-		detener_cronometro = True
+		pausar_cronometro = True
 		colocar_bloques = True
 		x_tanque = 286
 		y_tanque = 15
@@ -88,7 +121,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		pygame.mixer.quit()
 		time.sleep(1.1)
 		minutos, segundos = 1, 30
-		detener_cronometro = False
+		pausar_cronometro = False
 		puntos = 0
 
 	# area de juego donde se van a colocar y los bloques
@@ -184,7 +217,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		"aguila":	[0,	(1300, 350), 	"./eagle.png"	,[]	],
 	}
 
-	var = tk.IntVar() # Usado para guardar el valor de el Radiobutton seleccionado
+	var = tk.IntVar(canva_juego, 3) # Usado para guardar el valor de el Radiobutton seleccionado
 
 	label_inventario = tk.Label(canva_juego, text="Inventario", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
 	label_inventario.place(x=160, y=270)
@@ -349,9 +382,10 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 
 		while minutos*60 + segundos >= 0:
-			if detener_cronometro:
-				return
-			segundos-=1
+			if pausar_cronometro:
+				pass
+			else:
+				segundos-=1
 			if segundos >= 0:
 				if segundos//10 == 0 and minutos//10 == 0:
 					label_crono.configure(text=f"0{minutos}:0{segundos}")
@@ -513,6 +547,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	def disparar():
 		global direccion_tanque
 
+		#if len(bombas) == 0:
 		if direccion_tanque == 'up':
 			bomba_x = x_tanque
 			bomba_y = y_tanque - 10
@@ -532,13 +567,17 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 
 
+	
 		bomba = area_juego.create_image(bomba_x, bomba_y, image=image)
 		bombas.append((bomba, direccion_tanque))
+		#print(bomba)
+		# print(canva_juego.winfo_children())
 		
 
 
 	# Función para mover las bombas
 	def mover_bombas(recorrido_x, recorrido_y):
+		global bomba_en_movimiento
 		bombas_a_eliminar = []
 		try:
 			bomba_x_inicial = area_juego.coords(bombas[0])[0]
@@ -607,14 +646,17 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		for bomba, direccion in bombas_a_eliminar:
 			bombas.remove((bomba, direccion))
 			area_juego.delete(bomba)
+			bomba_en_movimiento = False
 
 		ventanaPrincipal.after(50, lambda: mover_bombas(recorrido_x, recorrido_y))
 
 	# Función para manejar los eventos del teclado
 	def manejar_evento_teclado(event):
+		global bomba_en_movimiento
 		mover_tanque(event)
-		if event.keysym == 'space':
+		if event.keysym == 'space' and not bomba_en_movimiento:
 			# Dispara la animación antes de disparar la bomba
+			bomba_en_movimiento = True
 			animacion_disparo(direccion_tanque)
 
 	# Actualizar la imagen del círculo según la dirección
