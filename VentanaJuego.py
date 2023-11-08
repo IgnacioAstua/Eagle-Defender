@@ -96,9 +96,11 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		pausa = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
 		pausa.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
+		continuar=tk.Button(pausa, text= 'Continuar partida', font= 'Fixedsys 20', bg='grey',fg='black', command=lambda:continuar_juego(pausa))
+		continuar.place(relx=0.5, y=100, anchor=tk.CENTER )
 
 		volver_inicio=tk.Button(pausa, text= 'Volver a inicio', font= 'Fixedsys 20', bg='grey',fg='black', command=lambda:ir_a_inicio())
-		volver_inicio.place(relx=0.5, y=100, anchor=tk.CENTER )
+		volver_inicio.place(relx=0.5, y=200, anchor=tk.CENTER )
 		
 		# titulo_turno = tk.Label(turno, text=f'Turno de: {rol[jugador]}',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 		# titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
@@ -106,8 +108,6 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		# btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: turno.place_forget())
 		# btn_aceptar.place(relx=0.5, y=200, anchor=tk.CENTER )
 
-		continuar=tk.Button(pausa, text= 'Continuar partida', font= 'Fixedsys 20', bg='grey',fg='black', command=lambda:continuar_juego(pausa))
-		continuar.place(relx=0.5, y=200, anchor=tk.CENTER )
 
 	def ir_a_inicio():
 		global pausar_cronometro, th, minutos, segundos, colocar_bloques,x_tanque,y_tanque, puntos
@@ -368,6 +368,32 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	area_juego.bind("<Button-1>", colocarBloques)
 	
 
+
+
+
+	#_______________________
+	#						\ . Regenerar bloques \__________________________
+
+	bloques_regen = {
+		"madera":[[],[]],
+		"concreto":[[],[]],
+		"acero":[[],[]],
+		"aguila":[[],[]]
+	}
+
+
+	def regenerar_bloques():
+		for bloque in bloques_regen:
+			for i in range(len(bloques_regen[bloque][1])):
+				# print(bloques_regen[bloque][1][i], bloques_colocados[bloque][1][i])
+				if not bloques_regen[bloque][1][i] in bloques_colocados[bloque][1]:
+					bloques_regen[bloque][1][i].place(x=bloques_regen[bloque][0][i][0]+1, y=bloques_regen[bloque][0][i][1]+1)
+					bloques_colocados[bloque][1].append(bloques_regen[bloque][1][i])
+					bloques_colocados[bloque][0].append(bloques_regen[bloque][0][i])
+				
+
+
+
 	#_______________________
 	#						\ 7. Cronómetro \__________________________
 
@@ -379,12 +405,13 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	# funcion que muestra cuenta regresiva
 	def cronometro():
 		global minutos, segundos, colocar_bloques
+		tiempo_inicial = minutos*60 + segundos
 
 
 		while minutos*60 + segundos >= 0:
-			if pausar_cronometro:
-				pass
-			else:
+			if tiempo_inicial != minutos*60 + segundos and ((minutos*60 + segundos - 1) - tiempo_inicial)%25 == 0 and turno_atacante:
+				regenerar_bloques()
+			if not pausar_cronometro:
 				segundos-=1
 			if segundos >= 0:
 				if segundos//10 == 0 and minutos//10 == 0:
@@ -424,6 +451,11 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	dar_turno.place(x=160, y=500)
 	
 	turno = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
+	titulo_turno = tk.Label(turno, text='',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
+	titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
+
+	btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: turno.place_forget())
+	btn_aceptar.place(relx=0.5, y=200, anchor=tk.CENTER )
 	def turno_rol(jugador, funcion):
 		if len(bloques_colocados["aguila"][1]) <= 0 and jugador == "atacante":
 			messagebox.showerror(title=f"Aguila no colocada.", 
@@ -431,12 +463,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 				)
 		else:
 			turno.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-
-			titulo_turno = tk.Label(turno, text=f'Turno de: {rol[jugador]}',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-			titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
-
-			btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: turno.place_forget())
-			btn_aceptar.place(relx=0.5, y=200, anchor=tk.CENTER )
+			titulo_turno.configure(text=f'Turno de: {rol[jugador]}')
 			funcion()
 
 	def turno_defender():
@@ -449,6 +476,11 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	def turno_atacar():
 		global th, turno_atacante
 		turno_atacante = True
+		for bloque in bloques_colocados:
+			for i in range(len(bloques_colocados[bloque][1])):
+				bloques_regen[bloque][1].append(bloques_colocados[bloque][1][i])
+				bloques_regen[bloque][0].append(bloques_colocados[bloque][0][i])
+		
 		dar_turno.place_forget()
 		area_juego.unbind("<Button-1>")
 		ventanaPrincipal.bind("<Key>", manejar_evento_teclado)

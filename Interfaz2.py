@@ -126,7 +126,7 @@ def registro_usuario():
 	edad = entrada_edad.get()
 	global ruta_foto
 	global ruta_cancion
-
+	
 	if nickname and nombre and correo and contrasena and edad:
 
 		# Guardar los datos en un archivo de texto llamado 'registro.txt'
