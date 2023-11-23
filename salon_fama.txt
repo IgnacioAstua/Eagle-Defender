@@ -1,0 +1,5 @@
+0,pepe,C:/Users/Joelb/Desktop/Joel/1-Descargas/iii.png,C:/Users/Joelb/Desktop/Joel/1-Descargas/y2mate.is - 23.24 Official 4x4 Single -N66ZM0IHczU-192k-1696484486.mp3
+2,joel,C:/Users/Joelb/Desktop/Joel/2-Clases/Prin. Modelado en Ing/Eagle-Defender/imagenes/pared.png,C:/Users/Joelb/Desktop/Joel/1-Descargas/night-city-knight-127028.mp3
+3,Jugador 2,./imagenes/perfil_placeholder.png,./musica/winner_default.mp3
+5,Jugador 2,./imagenes/perfil_placeholder.png,./musica/winner_default.mp3
+5,Jugador 2,./imagenes/perfil_placeholder.png,./musica/winner_default.mp3

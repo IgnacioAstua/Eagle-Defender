@@ -3,6 +3,10 @@ from tkinter import filedialog, messagebox
 from VentanaJuego import ventanaJuego
 from PIL import Image, ImageTk #pip install pillow
 import pygame
+import os
+import threading
+import time
+import random
 #Ventana Pricipal
 ventana1 = tk.Tk()
 
@@ -14,15 +18,92 @@ ventana1.configure(bg = "green")
 canva1 = tk.Canvas(ventana1, width = 1550, height = 800, bg = "green")
 canva1.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 #Fondo principal
-fondo1 = tk.PhotoImage(file = "fondo1.png")
+fondo1 = tk.PhotoImage(file = "./imagenes/fondo1.png")
 fondoP = tk.Label(canva1, image = fondo1)
 fondoP.place(x=0, y=0)
+
+
+# my_sound = pygame.mixer.Sound(datos[3])
+# pygame.mixer.Channel(3).play(my_sound)
+# my_sound.set_volume(0.7)
+
+# pygame.mixer.init()
+# musica_fondo = pygame.mixer.Sound(random_song)
+# pygame.mixer.Channel(3).play(musica_fondo, loops=-1)
+# musica_fondo.set_volume(0.7)
+
+# import pygame 
+
+# pygame.init() 
+
+
+def insert_into_playlist(playlist, music_file):
+	playlist.append(music_file)
+
+not_stopping = True
+def play_playlist(channel, play_list, paused):
+	for music_file in play_list:
+		sound = pygame.mixer.Sound(music_file)
+		channel.queue(sound)
+		while channel.get_busy() and not_stopping:
+			pygame.time.Clock().tick(10)
+
+	paused.clear()
+
+def start_playlist(channel, play_list, paused_music):
+	music_thread = threading.Thread(target=play_playlist, args=(channel, play_list, paused_music))
+	music_thread.start()
+
+def pause_music(channel):
+	channel.pause()
+
+def resume_music(channel):
+	channel.unpause()
+
+pygame.mixer.init()
+
+path = "./bg_music"
+all_mp3 = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.mp3')]
+
+playlist_channel = pygame.mixer.Channel(3)  # Use channel 1 for the playlist
+
+playList = []
+for songs in all_mp3:
+	random_song = random.choice(all_mp3)
+	all_mp3.pop(all_mp3.index(random_song))
+	insert_into_playlist(playList, random_song)
+
+paused_music = threading.Event()
+
+start_playlist(playlist_channel, playList, paused_music)
+
+# # Your GUI or button handling code here
+# while True:
+#     # Simulate a button click to pause music, replace this with your actual button click event
+#     time.sleep(1)
+#     pause_music(playlist_channel)
+
+#     # Simulate a button click to resume music, replace this with your actual button click event
+#     time.sleep(1)
+#     resume_music(playlist_channel)
+
+ 
+# Continue with the rest of your program
+# ...
+
+# Wait for the music thread to finish before exiting (optional)
+# music_thread.join()
+
+
+
+
+
 
 #Variables globales para rutas de archivos y nombres de usuario
 ruta_foto = ""
 ruta_cancion = ""
-usr1 = ["Jugador 1","","","","","./perfil_placeholder.png","./winner_default.mp3"]
-usr2 = ["Jugador 2","","","","","./perfil_placeholder.png","./winner_default.mp3"]
+usr1 = ["Jugador 1","","","","","./imagenes/perfil_placeholder.png","./musica/winner_default.mp3"]
+usr2 = ["Jugador 2","","","","","./imagenes/perfil_placeholder.png","./musica/winner_default.mp3"]
 
 #Función para subir la foto
 def seleccionar_foto():
@@ -103,7 +184,7 @@ def validacion_inicio_sesion():
 
 #Ventana de inicio de sesion
 inicio_sesion = tk.Canvas(ventana1, width=900, height=563)
-fondo2 = tk.PhotoImage(file='inicio.png')
+fondo2 = tk.PhotoImage(file='./imagenes/inicio.png')
 fondo_inicio = tk.Label(inicio_sesion, image= fondo2)
 fondo_inicio.place(x=0, y=0)
 nombre_txt = tk.Label(inicio_sesion, text='Nickname:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
@@ -154,7 +235,7 @@ def registro_usuario():
 				if ruta_foto == "" and ruta_cancion == "":
 					msj = messagebox.askquestion("Sin foto ni canción", "No se agregó foto ni canción.\nSe agregarán una foto y canción por defecto.\n¿Desea continuar?")
 					if msj == "yes":
-						ruta_foto = "./perfil_placeholder.png"
+						ruta_foto = "./imagenes/perfil_placeholder.png"
 						ruta_cancion = "./winner_default.mp3"
 						# Escribir los datos en el archivo separados por comas
 						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
@@ -166,7 +247,7 @@ def registro_usuario():
 				elif ruta_foto == "":
 					msj = messagebox.askquestion("Sin foto.", "No se agregó foto.\nSe agregarán una foto por defecto.\n¿Desea continuar?")
 					if msj == "yes":
-						ruta_foto = "./perfil_placeholder.png"
+						ruta_foto = "./imagenes/perfil_placeholder.png"
 						# Escribir los datos en el archivo separados por comas
 						archivo.write(f"{nickname},{nombre},{correo},{contrasena},{edad},{ruta_foto},{ruta_cancion} \n")
 						messagebox.showinfo("Registro exitoso.", "Se registró sin foto personalizada.")
@@ -270,25 +351,109 @@ ingles.place(x=150, y=380)
 
 #Ventana salon de la fama
 salon_canva = tk.Canvas(ventana1, width=700, height=447)
-fondo3 = tk.PhotoImage(file='pared.png')
-fondo_salon = tk.Label(salon_canva, image=fondo3)
-fondo_salon.place(x=0, y=0)
-mejores_txt = tk.Label(salon_canva, text= 'Mejores Puntuaciones', font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
-mejores_txt.place(x=165, y=20)
+
+
+def exit_salon():
+	salon_canva.pack_forget()
+	pygame.mixer.Channel(0).stop()
+	pygame.mixer.Channel(3).unpause()
+
+def salon():
+
+	salon_canva.delete('all')
+
+	salon_canva.pack(side=tk.TOP, pady=100)
+
+	fondo3 = Image.open("./imagenes/pared.png")
+	f3 = ImageTk.PhotoImage(fondo3)
+	fondo_salon = tk.Label(salon_canva, image=f3)
+	fondo_salon.image = f3
+	fondo_salon.place(x=0, y=0)
+
+	mejores_txt = tk.Label(salon_canva, text= 'Mejores Tiempos', font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
+	mejores_txt.place(relx=0.5, y=20, anchor=tk.N)
+
+	salir_salon = tk.Button(salon_canva, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: exit_salon())
+	salir_salon.place(x=10, y=10)
+
+	with open('salon_fama.txt', 'r+') as salon_fama:
+		lineas = salon_fama.readlines()
+		play_btn = []
+		for i in range(len(lineas)):
+			datos = lineas[i].strip().split(',')
+			posicion = tk.Label(salon_canva,  text= f"{i + 1}." , width=2, font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
+			posicion.place(x=20, y=90 +70*(i))
+
+			formato_tiempo = "00:00"
+			minutos, segundos = int(datos[0])//60, int(datos[0])%60
+			if segundos//10 == 0 and minutos//10 == 0:
+				formato_tiempo= f"0{minutos}:0{segundos}"
+			elif  minutos//10 == 0:
+				formato_tiempo= f"0{minutos}:{segundos}"
+			elif  segundos//10 == 0:
+				formato_tiempo= f"{minutos}:0{segundos}"
+			else:
+				formato_tiempo= f"{minutos}:{segundos}"
+			time = tk.Label(salon_canva,  text=formato_tiempo, width=6, font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
+			time.place(x=75, y=90 +70*(i))
+
+			play = tk.Button(salon_canva,  text="▷", width=3, font= 'Fixedsys 17',bg='grey', fg='black', relief='raised', command=lambda i=i:salon_play(lineas[i], i, play_btn))
+			play.place(x=225, y=90 +70*(i))
+			play_btn.append(play)
+
+			imgJ_salon = Image.open(datos[2])
+			resize_imgJ_salon = imgJ_salon.resize((50,50))
+			imgJ_salon = ImageTk.PhotoImage(resize_imgJ_salon)
+
+			label_imgJ_salon = tk.Label(salon_canva, image = imgJ_salon, height=50, width=50, borderwidth=0, highlightthickness=0)
+			label_imgJ_salon.imgJ_salon = imgJ_salon
+			label_imgJ_salon.place(x=285, y=90 +70*(i))
+
+			name = tk.Label(salon_canva,  text=datos[1], font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
+			name.place(x=335, y=90 +70*(i))
+
+def salon_play(linea, i, play_btn):
+	if play_btn[i].cget("text") == "▷":
+		for play_btns in play_btn:
+			if play_btns.cget("text") == "||":
+				play_btns.configure(text="▷")
+		play_btn[i].configure(text="||")
+		datos = linea.strip().split(',')
+		pygame.mixer.init()
+		my_sound = pygame.mixer.Sound(datos[3])
+		pygame.mixer.Channel(0).play(my_sound)
+		my_sound.set_volume(0.7)
+		pygame.mixer.Channel(3).pause()
+	else:
+		pygame.mixer.Channel(3).unpause()
+		play_btn[i].configure(text="▷")
+		pygame.mixer.Channel(0).pause()
 
 #Ventana de ayuda
-text_controles = """W: mover tanque hacia arriba
-A: mover tanque hacia la izquierda
-S: mover tanque hacia abajo
-D: mover tanque hacia la derecha
-Espacio: disparar"""
+text_controles = """Teclas:
+ - W: mover tanque hacia arriba
+ - A: mover tanque hacia la izquierda
+ - S: mover tanque hacia abajo
+ - D: mover tanque hacia la derecha
+ - Espacio: disparar
+Resistencia bloques:
+ - Concreto: 1 bomba, 2 bolas de fuego, 2 bolas de agua
+ - Acero: 1 bomba, 1 bolas de fuego, 2 bolas de agua
+ - Madera: 1 de cualquier tipo de poder
+¿Cómo ganar? (según el rol)
+ - Atacante: derrivando el aguila antes de que finalice
+ el tiempo.
+ - Defensor: si el aguila no fue derribada por el 
+ atacante al finalizar el tiempo."""
+
+
 ayuda = tk.Canvas(ventana1, width=900, height=563)
 fondo_ayuda = tk.Label(ayuda, image= fondo2)
 fondo_ayuda.place(x=0, y=0)
 titulo_ayuda = tk.Label(ayuda, text='Controles de juego:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-titulo_ayuda.place(relx=0.5, y=100, anchor=tk.CENTER)
-controles = tk.Label(ayuda, text=text_controles, font= 'Fixedsys 25', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
-controles.place(relx=0.5, y=200, anchor=tk.N)
+titulo_ayuda.place(relx=0.5, y=30, anchor=tk.CENTER)
+controles = tk.Label(ayuda, text=text_controles, font= 'Fixedsys 20', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
+controles.place(relx=0.5, y=70, anchor=tk.N)
 
 
 #Titulo principal
@@ -298,7 +463,7 @@ tituloP.place(relx=0.5, y=70, anchor=tk.N)
 #Jugador 1
 jugador1 = tk.Label (canva1, text = "Jugador 1", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
 jugador1.place(x=200, y=100)
-imgJ1 = Image.open("./perfil_placeholder.png")
+imgJ1 = Image.open("./imagenes/perfil_placeholder.png")
 resize_imgJ1 = imgJ1.resize((50,50))
 imgJ1 = ImageTk.PhotoImage(resize_imgJ1)
 
@@ -309,7 +474,7 @@ label_imgJ1.place(x=150, y=100)
 #Jugador 2
 jugador2 = tk.Label (canva1, text = "Jugador 2", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
 jugador2.place(x=1200, y=100)
-imgJ2 = Image.open("./perfil_placeholder.png")
+imgJ2 = Image.open("./imagenes/perfil_placeholder.png")
 resize_imgJ2 = imgJ2.resize((50,50))
 imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
 
@@ -334,10 +499,8 @@ salir_registro = tk.Button(registro, text = "Volver", font = "Fixedsys 16",bg='g
 salir_registro.place(x=10, y=10)
 
 #Boton salon de la fama
-salon_fama = tk.Button(canva1, text='Salón de la fama', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: salon_canva.pack(side=tk.TOP, pady=100))
+salon_fama = tk.Button(canva1, text='Salón de la fama', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: salon())
 salon_fama.place(relx=0.5, y=525, anchor=tk.N)
-salir_salon = tk.Button(salon_canva, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: salon_canva.pack_forget())
-salir_salon.place(x=10, y=10)
 
 #Boton de ajustes
 ajust=tk.Button(canva1, text ="Ajustes", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: ajustes_canva.pack(side= tk.TOP, pady=50))
@@ -353,7 +516,7 @@ salir_ayuda=tk.Button(ayuda, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='
 salir_ayuda.place(x=10,y=10)
 
 #Boton de salida
-salirP=tk.Button(canva1, text = "Salir", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: ventana1.destroy())
+salirP=tk.Button(canva1, text = "Salir", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: on_closing())
 salirP.place(x=95,y=30)
 
 #jugar sin iniciar sesion
@@ -428,26 +591,36 @@ def iniciarJuego():
 		messagebox.showerror("Error", "Dos jugadores deben haber iniciado sesión para iniciar el juego.")
 
 def jugar():
+	canal = pygame.mixer
 	canva1.place_forget()
 	select_rol.pack_forget()
 	rol = {"atacante":"", "defensor":""}
 	if var_rol.get() == 0:
 		rol["atacante"], rol["defensor"] = usr1[0], usr2[0]
-		ventanaJuego(ventana1, usr2[0], usr1[0], rol, canva1)
+		ventanaJuego(ventana1, usr2, usr1, rol, canva1, canal)
 	else:
 		rol["atacante"], rol["defensor"] = usr2[0], usr1[0]
-		ventanaJuego(ventana1, usr1[0], usr2[0], rol, canva1)
+		ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal)
 
 def jugar_rapido():
+	canal = pygame.mixer
 	canva1.place_forget()
 	rol = {"atacante":"Jugador 1", "defensor":"Jugador 2"}
-	ventanaJuego(ventana1, "Jugador 1", "Jugador 2", rol, canva1)
+	ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal)
 
 
 
 
 
 
+def on_closing():
+
+	if messagebox.askokcancel("Salir", "¿Está seguro que quiere salir del juego?"):
+		not_stopping = False
+		pygame.mixer.quit()
+		ventana1.destroy()
+
+ventana1.protocol("WM_DELETE_WINDOW", on_closing)
 
 
 #jugar_rapido()

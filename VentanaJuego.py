@@ -1,19 +1,3 @@
-"""
-Índice
-
-1. Musica
-2. Pantalla de juego y cuadricula
-3. Nombres de jugadores en pantalla de juego
-4. Inventario
-5. Colocar bloques
-6. Remover bloques
-7. Cronómetro
-8. Cambiar turno
-
-"""
-
-
-
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk #pip install pillow
@@ -31,35 +15,37 @@ colocar_bloques = True
 # Variables de posición del círculo
 x_tanque = 286
 y_tanque = 15
-# Dirección actual del círculo
+# Dirección actual del tanque
 direccion_tanque = 'down'
 turno_atacante = False
 puntos = 0
 th = False
-pausar_cronometro = False
+pausar_cronometro = True
 # Bandera para saber si hay una bomba en la pantalla
 bomba_en_movimiento = False
+tiempo_inicial_atacante = 0
+recorrido_x, recorrido_y = 0, 0
 
 
 
 # Ventana Principal
-def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
-
+def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal):
+	
 	#___________________
-	#					\ 1. Musica \___________________
+	#					\ Musica \___________________
 
 	path = "./musica"
-	all_mp3 = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.mp3')]
+	all_songs = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.mp3')]
 
-	random_song = random.choice(all_mp3)
+	random_song = random.choice(all_songs)
 	pygame.mixer.init()
 	musica_fondo = pygame.mixer.Sound(random_song)
-	pygame.mixer.Channel(0).play(musica_fondo, loops=-1)
+	pygame.mixer.Channel(3).play(musica_fondo, loops=-1)
 	musica_fondo.set_volume(0.7)
 
 
 	#_______________
-	#				\ 2. Pantalla de juego y cuadricula \_______________
+	#				\ Pantalla de juego y cuadricula \_______________
 
 	# Contiene los bloque, cronometro y area de juego
 	canva_juego = tk.Canvas(ventanaPrincipal, width = 1550, height = 800)
@@ -67,7 +53,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 
 	# Fondo de pantalla
-	img_fondo = Image.open("./fondo2.png")
+	img_fondo = Image.open("./imagenes/fondo2.png")
 	resize_image = img_fondo.resize((1700,900))
 	imgF = ImageTk.PhotoImage(resize_image)
 
@@ -77,52 +63,72 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 	# volver a pantalla inicial
 
+	#_______________
+	#				\ Pausar juego \_______________
+
 	#boton para pausar en la pantalla de juego
-	pausar=tk.Button(canva_juego, text= 'Pausa', font= 'Fixedsys 16', bg='grey',fg='black', command=lambda:pausar_juego())
+	pausar=tk.Button(canva_juego, text= 'Pausa', font= 'Fixedsys 16', bg='grey',fg='black', 
+		command=lambda:pausar_juego())
 	pausar.place(x=100,y=30)
 
 	def continuar_juego(pausa):
 		global pausar_cronometro
 		pausar_cronometro = False
 		pausa.place_forget()
-		pausar.configure(state=tk.NORMAL)
-
+		for child in canva_juego.winfo_children():
+			child.configure(state=tk.NORMAL)
+		if not turno_atacante:
+			area_juego.bind("<Button-1>", colocarBloques)
+		else:
+			ventanaPrincipal.bind("<Key>", manejar_evento_teclado)
 
 	def pausar_juego():
 		global pausar_cronometro
 		pausar_cronometro = True
-		pausar.configure(state=tk.DISABLED)
+		for child in canva_juego.winfo_children():
+			child.configure(state=tk.DISABLED)
+		if not turno_atacante:
+			area_juego.unbind("<Button-1>")
+		else:
+			ventanaPrincipal.unbind("<Key>")
+		#pausar.configure(state=tk.DISABLED)
 		# ventana de pausa
 		pausa = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
 		pausa.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
-		continuar=tk.Button(pausa, text= 'Continuar partida', font= 'Fixedsys 20', bg='grey',fg='black', command=lambda:continuar_juego(pausa))
-		continuar.place(relx=0.5, y=100, anchor=tk.CENTER )
+		continuar=tk.Button(pausa, text= 'Continuar partida', font= 'Fixedsys 20', bg='grey',fg='black', 
+			command=lambda:continuar_juego(pausa))
+		continuar.place(relx=0.5, y=70, anchor=tk.CENTER )
 
-		volver_inicio=tk.Button(pausa, text= 'Volver a inicio', font= 'Fixedsys 20', bg='grey',fg='black', command=lambda:ir_a_inicio())
-		volver_inicio.place(relx=0.5, y=200, anchor=tk.CENTER )
-		
-		# titulo_turno = tk.Label(turno, text=f'Turno de: {rol[jugador]}',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-		# titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
+		controles=tk.Button(pausa, text= 'Ayuda', font= 'Fixedsys 20', bg='grey',fg='black', 
+			command=lambda:vent_ayuda())
+		controles.place(relx=0.5, y=150, anchor=tk.CENTER )
 
-		# btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: turno.place_forget())
-		# btn_aceptar.place(relx=0.5, y=200, anchor=tk.CENTER )
+		volver_inicio=tk.Button(pausa, text= 'Volver a inicio', font= 'Fixedsys 20', bg='grey',fg='black', 
+			command=lambda:ir_a_inicio())
+		volver_inicio.place(relx=0.5, y=240, anchor=tk.CENTER )
+
 
 
 	def ir_a_inicio():
-		global pausar_cronometro, th, minutos, segundos, colocar_bloques,x_tanque,y_tanque, puntos
+		global pausar_cronometro, turno_atacante, th, recorrido_x, recorrido_y,minutos, segundos, direccion_tanque, colocar_bloques,x_tanque,y_tanque, puntos, tiempo_inicial_atacante
 		th = threading.Thread(target=cronometro)
 		pausar_cronometro = True
+		turno_atacante = False
 		colocar_bloques = True
+		direccion_tanque = 'down'
 		x_tanque = 286
 		y_tanque = 15
 		canva_juego.destroy()
 		canva1.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-		pygame.mixer.quit()
-		time.sleep(1.1)
+		pygame.mixer.Channel(3).stop()
+		time.sleep(1.2)
 		minutos, segundos = 1, 30
 		pausar_cronometro = False
 		puntos = 0
+		tiempo_inicial_atacante = 0
+		recorrido_x, recorrido_y = 0, 0
+
 
 	# area de juego donde se van a colocar y los bloques
 	area_juego = tk.Canvas(canva_juego, width = size_area_juego["width"], height = size_area_juego["height"], 
@@ -150,46 +156,75 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 
 	#_______________
-	#				\ 3. Nombres de jugadores en pantalla de juego \_______________
+	#				\ Ventana ayuda \_______________
+	def vent_ayuda():
+		text_controles = """Teclas:
+ - W: mover tanque hacia arriba
+ - A: mover tanque hacia la izquierda
+ - S: mover tanque hacia abajo
+ - D: mover tanque hacia la derecha
+ - Espacio: disparar
+Resistencia bloques:
+ - Concreto: 1 bomba, 2 bolas de fuego, 2 bolas de agua
+ - Acero: 1 bomba, 1 bolas de fuego, 2 bolas de agua
+ - Madera: 1 de cualquier tipo de poder
+¿Cómo ganar? (según el rol)
+ - Atacante: derrivando el aguila antes de que finalice
+ el tiempo.
+ - Defensor: si el aguila no fue derribada por el 
+ atacante al finalizar el tiempo."""
 
-	with open('registro.txt', 'r') as archivo:
-			lineas = archivo.readlines()
-			for linea in lineas:
-				datos = linea.strip().split(',')
-				#Prueba
-				if datos[0] == usr1:
-					jugador1 = tk.Label (canva_juego, text = datos[0], font = "Fixedsys 30 ",bg= "grey", 
-						fg='black', relief= 'raised'
-					)
-					jugador1.place(x=200, y=100)
-					imgJ1 = Image.open(datos[5])
-					resize_imgJ1 = imgJ1.resize((50,50))
-					imgJ1 = ImageTk.PhotoImage(resize_imgJ1)
+		ayuda = tk.Canvas(ventanaPrincipal, width=900, height=563)
+		ayuda.pack(side= tk.TOP, pady=50)
+		fondo2 = Image.open("./imagenes/inicio.png")
+		f2 = ImageTk.PhotoImage(fondo2)
+		fondo_ayuda = tk.Label(ayuda, image=f2)
+		fondo_ayuda.image = f2
+		fondo_ayuda.place(x=0, y=0)
+		titulo_ayuda = tk.Label(ayuda, text='Controles de juego:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
+		titulo_ayuda.place(relx=0.5, y=30, anchor=tk.CENTER)
+		controles = tk.Label(ayuda, text=text_controles, font= 'Fixedsys 20', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
+		controles.place(relx=0.5, y=70, anchor=tk.N)
+		salir_ayuda=tk.Button(ayuda, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', 
+			command = lambda: ayuda.pack_forget())
+		salir_ayuda.place(x=10, y=10)
 
-					label_imgJ1 = tk.Label(canva_juego, image = imgJ1, height=50, width=50, borderwidth=0, 
-						highlightthickness=0
-					)
-					label_imgJ1.imgJ1 = imgJ1
-					label_imgJ1.place(x=150, y=100)
+	#_______________
+	#				\ Nombres de jugadores en pantalla de juego \_______________
 
-				elif datos[0] == usr2:
-					jugador2 = tk.Label (canva_juego, text = datos[0], font = "Fixedsys 30 ",bg= "grey", 
-						fg='black', relief= 'raised'
-					)
-					jugador2.place(x=1200, y=100)
-					imgJ2 = Image.open(datos[5])
-					resize_imgJ2 = imgJ2.resize((50,50))
-					imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
+	def mostrar_etiqueta_jugador():
+		jugador1 = tk.Label (canva_juego, text = usr1[0], font = "Fixedsys 30 ",bg= "grey", 
+			fg='black', relief= 'raised'
+		)
+		jugador1.place(x=200, y=100)
+		imgJ1 = Image.open(usr1[5])
+		resize_imgJ1 = imgJ1.resize((50,50))
+		imgJ1 = ImageTk.PhotoImage(resize_imgJ1)
 
-					label_imgJ2 = tk.Label(canva_juego, image = imgJ2, height=50, width=50, borderwidth=0, 
-						highlightthickness=0
-					)
-					label_imgJ2.imgJ2 = imgJ2
-					label_imgJ2.place(x=1150, y=100)
+		label_imgJ1 = tk.Label(canva_juego, image = imgJ1, height=50, width=50, borderwidth=0, 
+			highlightthickness=0
+		)
+		label_imgJ1.imgJ1 = imgJ1
+		label_imgJ1.place(x=150, y=100)
 
+		jugador2 = tk.Label (canva_juego, text = usr2[0], font = "Fixedsys 30 ",bg= "grey", 
+			fg='black', relief= 'raised'
+		)
+		jugador2.place(x=1200, y=100)
+		imgJ2 = Image.open(usr2[5])
+		resize_imgJ2 = imgJ2.resize((50,50))
+		imgJ2 = ImageTk.PhotoImage(resize_imgJ2)
+
+		label_imgJ2 = tk.Label(canva_juego, image = imgJ2, height=50, width=50, borderwidth=0, 
+			highlightthickness=0
+		)
+		label_imgJ2.imgJ2 = imgJ2
+		label_imgJ2.place(x=1150, y=100)
+
+	mostrar_etiqueta_jugador()
 
 	#_______________________
-	#						\ 4. Inventario \__________________________
+	#						\ Inventario \__________________________
 	'''
 	- Se crea de forma iterativa usando la informacion de la matriz bloques
 	- Cada fila es un objeto del inventario
@@ -204,17 +239,17 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 	# La lista vacía en la posicion 4 de cada bloque se remplazará con la referencia al bloque en el inventario
 	bloques = [
-		["madera",	10,	(160, 350),	"./madera.png"	,[]	],
-		["concreto",10,	(216, 350), 	"./concreto.png",[]	],
-		["acero", 	10,	(272, 350), 	"./acero.png"	,[]	],
-		["aguila", 	1,	(328, 350), 	"./eagle.png"	,[]	],
+		["madera",	10,	(160, 350),	"./imagenes/madera.png"	,[]	],
+		["concreto",10,	(272, 350), 	"./imagenes/concreto1.png",[]	],
+		["acero", 	10,	(216, 350), 	"./imagenes/acero1.png"	,[]	],
+		["aguila", 	1,	(328, 350), 	"./imagenes/eagle.png"	,[]	],
 	]
 
 	destruidos = {
-		"madera":	[0,	(1150, 350),	"./madera.png"	,[]	],
-		"concreto":	[0,	(1200, 350),	"./concreto.png",[]	],
-		"acero":	[0,	(1250, 350), 	"./acero.png"	,[]	],
-		"aguila":	[0,	(1300, 350), 	"./eagle.png"	,[]	],
+		"madera":	[0,	(1150, 350),	"./imagenes/madera.png"	,[]	],
+		"concreto":	[0,	(1250, 350),	"./imagenes/concreto1.png",[]	],
+		"acero":	[0,	(1200, 350), 	"./imagenes/acero1.png"	,[]	],
+		"aguila":	[0,	(1300, 350), 	"./imagenes/eagle.png"	,[]	],
 	}
 
 	var = tk.IntVar(canva_juego, 3) # Usado para guardar el valor de el Radiobutton seleccionado
@@ -253,7 +288,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	label_puntos = tk.Label(canva_juego, text=f"Puntos:{puntos}", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
 	label_puntos.place(x=1150, y=500)
 	#_______________________
-	#						\ 5. Colocar bloques \__________________________
+	#						\ Colocar bloques \__________________________
 	"""
 	- Los bloques se colocan con un label que tiene una imagen
 	- La imagen corresponde al bloque seleccionado en el inventario (radiobutton)
@@ -262,10 +297,10 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	"""
 	#listas para guardar cada uno de los labels se
 	bloques_colocados = {
-		"madera":[[],[]],
-		"concreto":[[],[]],
-		"acero":[[],[]],
-		"aguila":[[],[]]
+		"madera":	[[],[],[]],
+		"concreto":	[[],[],[]],
+		"acero":	[[],[],[]],
+		"aguila":	[[],[],[]]
 	}
 	# Colocar bloques
 	def colocarBloques(event):
@@ -302,17 +337,21 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 				label.bind("<Button-1>", lambda event, l=label: removerBloque(event,l))
 			# añade el label a la lista madera, concreto, acero y aguila, segun corresponda
 			if bloques[var.get()][0] == "madera":
-				bloques_colocados["madera"][1].append(label)
 				bloques_colocados["madera"][0].append(ubicacion)
+				bloques_colocados["madera"][1].append(label)
+				bloques_colocados["madera"][2].append(2)
 			elif bloques[var.get()][0] == "concreto":
-				bloques_colocados["concreto"][1].append(label)
 				bloques_colocados["concreto"][0].append(ubicacion)
+				bloques_colocados["concreto"][1].append(label)
+				bloques_colocados["concreto"][2].append(6)
 			elif bloques[var.get()][0] == "acero":
-				bloques_colocados["acero"][1].append(label)
 				bloques_colocados["acero"][0].append(ubicacion)
+				bloques_colocados["acero"][1].append(label)
+				bloques_colocados["acero"][2].append(3)
 			else :
-				bloques_colocados["aguila"][1].append(label)
 				bloques_colocados["aguila"][0].append(ubicacion)
+				bloques_colocados["aguila"][1].append(label)
+				bloques_colocados["aguila"][2].append(2)
 		elif not colocar_bloques:
 			messagebox.showinfo(title="Sin tiempo", message="El tiempo para colocar bloques a acabado")
 		else:
@@ -326,7 +365,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 				)
 
 	#_______________________
-	#						\ 6. Remover bloques \__________________________
+	#						\ Remover bloques \__________________________
 	"""
 	- Se usa las listas madera, concreto, acero y aguila, donde se guardaron los bloques colocados
 	- Cada label de los bloques tiene un bind con un callback hacia esta funcion (removerBloque)
@@ -343,59 +382,139 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 				i = bloques_colocados["madera"][1].index(label)
 				del bloques_colocados["madera"][0][i]
 				del bloques_colocados["madera"][1][i]
+				del bloques_colocados["madera"][2][i]
 			elif label in bloques_colocados["concreto"][1]:
 				bloques[1][1]+=1
 				bloques[1][4][0].configure(text=bloques[1][1])
 				i = bloques_colocados["concreto"][1].index(label)
 				del bloques_colocados["concreto"][0][i]
 				del bloques_colocados["concreto"][1][i]
+				del bloques_colocados["concreto"][2][i]
 			elif label in bloques_colocados["acero"][1]:
 				bloques[2][1]+=1
 				bloques[2][4][0].configure(text=bloques[2][1])
 				i = bloques_colocados["acero"][1].index(label)
 				del bloques_colocados["acero"][0][i]
 				del bloques_colocados["acero"][1][i]
+				del bloques_colocados["acero"][2][i]
 			elif label in bloques_colocados["aguila"][1]:
 				bloques[3][1]+=1
 				bloques[3][4][0].configure(text=bloques[3][1])
 				i = bloques_colocados["aguila"][1].index(label)
 				del bloques_colocados["aguila"][0][i] 
 				del bloques_colocados["aguila"][1][i] 
-			label.place_forget()
+				del bloques_colocados["aguila"][2][i] 
+			label.destroy()
 		else:
 			messagebox.showinfo(title="Sin tiempo.", message="Ya no puede remover los bloques")
-	# Llama a la funcion colocarBloques si se hace clic sobre el area de juego
-	area_juego.bind("<Button-1>", colocarBloques)
 	
 
 
 
-
 	#_______________________
-	#						\ . Regenerar bloques \__________________________
+	#						\Regenerar bloques \__________________________
 
 	bloques_regen = {
-		"madera":[[],[]],
-		"concreto":[[],[]],
-		"acero":[[],[]],
-		"aguila":[[],[]]
+		"madera":	[[],[],[]],
+		"concreto":	[[],[],[]],
+		"acero":	[[],[],[]],
+		"aguila":	[[],[],[]]
 	}
 
 
 	def regenerar_bloques():
+		ruta_img_bloque = {
+			"madera" : "./imagenes/madera.png",
+			"concreto" : "./imagenes/concreto1.png",
+			"acero" : "./imagenes/acero1.png",
+			"aguila" : "./imagenes/eagle.png"
+		}
 		for bloque in bloques_regen:
-			for i in range(len(bloques_regen[bloque][1])):
-				# print(bloques_regen[bloque][1][i], bloques_colocados[bloque][1][i])
-				if not bloques_regen[bloque][1][i] in bloques_colocados[bloque][1]:
-					bloques_regen[bloque][1][i].place(x=bloques_regen[bloque][0][i][0]+1, y=bloques_regen[bloque][0][i][1]+1)
-					bloques_colocados[bloque][1].append(bloques_regen[bloque][1][i])
+			for i in range(len(bloques_regen[bloque][0])):
+					
+				image = Image.open(ruta_img_bloque[bloque])
+				resize_image = image.resize((dim_cuadros["y2"], dim_cuadros["x2"]))
+				img = ImageTk.PhotoImage(resize_image)
+				bloques_regen[bloque][1][i].configure(image=img)
+				bloques_regen[bloque][1][i].img = img
+
+
+				if 	not bloques_regen[bloque][1][i] in bloques_colocados[bloque][1] and not (
+					x_tanque - 10< bloques_regen[bloque][0][i][0] + dim_cuadros["y2"] and
+					x_tanque + 10 > bloques_regen[bloque][0][i][0] and
+					y_tanque - 10< bloques_regen[bloque][0][i][1] + dim_cuadros["x2"] and
+					y_tanque + 10 > bloques_regen[bloque][0][i][1]
+				):
+					coord_x = bloques_regen[bloque][0][i][0]+1
+					coord_y = bloques_regen[bloque][0][i][1]+1
+
+					bloques_regen[bloque][1][i].place(x=coord_x, y=coord_y)
 					bloques_colocados[bloque][0].append(bloques_regen[bloque][0][i])
+					bloques_colocados[bloque][1].append(bloques_regen[bloque][1][i])
+					bloques_colocados[bloque][2].append(bloques_regen[bloque][2][i])
+					print(bloques_colocados[bloque][2], bloques_regen[bloque][2][i])
+
+				bloques_colocados[bloque][2][i] = bloques_regen[bloque][2][i]
+				
+					
+
 				
 
+	#_______________________
+	#						\ Mostrar ganador \__________________________
 
+	def ganador(jugador):
+		global pausar_cronometro, turno_atacante
+		pausar_cronometro = True
+		turno_atacante = False
+
+		ventanaPrincipal.unbind("<Key>")
+
+		ventana_ganador = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
+		ventana_ganador.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+		titulo_vent_ganador=tk.Label(ventana_ganador, text= 'El ganador es:', font= 'Fixedsys 25', bg='grey',fg='black')
+		titulo_vent_ganador.place(relx=0.5, y=70, anchor=tk.CENTER )
+
+		jugador_ganador = tk.Label (ventana_ganador, text = jugador[0], font = "Fixedsys 30 ",bg= "grey", 
+			fg='black', relief= 'raised'
+		)
+		jugador_ganador.place(relx=0.5, y=170, anchor=tk.CENTER)
+
+		cerrar_vent_ganador=tk.Button(ventana_ganador, text= 'Aceptar', font= 'Fixedsys 20', bg='grey',fg='black', 
+			command=lambda:cerrar_ventana_ganador(ventana_ganador))
+		cerrar_vent_ganador.place(relx=0.5, y=270, anchor=tk.CENTER )
+		elegible = False
+		if destruidos["aguila"][0] > 0:
+			tiempo_tardado = (tiempo_inicial_atacante-minutos*60-segundos)
+
+			tiempos = []
+			with open('salon_fama.txt', 'r') as salon_fama:
+				lineas = salon_fama.readlines()
+
+				for linea in lineas:
+					datos = linea.strip().split(',')
+					tiempos.append(datos)
+				tiempos.append([str(tiempo_tardado),jugador[0],jugador[5],jugador[6]])
+				tiempos.sort(key=lambda x: int(x[0]))
+				tiempos = tiempos[:5]
+				print(tiempos)
+				if [str(tiempo_tardado),jugador[0],jugador[5],jugador[6]] in tiempos:
+					elegible = True
+
+			with open('salon_fama.txt', 'w') as salon_fama:
+				salon_fama.seek(0)
+				for linea in tiempos:
+					salon_fama.writelines(f"{linea[0]},{linea[1]},{linea[2]},{linea[3]}\n")
+
+		return elegible			
+
+	def cerrar_ventana_ganador(ventana_ganador):
+		ventana_ganador.place_forget()
+		ir_a_inicio()
 
 	#_______________________
-	#						\ 7. Cronómetro \__________________________
+	#						\ Cronómetro \__________________________
 
 
 	# Muestra el cronometro en pantalla
@@ -404,12 +523,14 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 	# funcion que muestra cuenta regresiva
 	def cronometro():
-		global minutos, segundos, colocar_bloques
-		tiempo_inicial = minutos*60 + segundos
+		global minutos, segundos, colocar_bloques, tiempo_inicial_atacante
+		tiempo_inicial_atacante
 
 
 		while minutos*60 + segundos >= 0:
-			if tiempo_inicial != minutos*60 + segundos and ((minutos*60 + segundos - 1) - tiempo_inicial)%25 == 0 and turno_atacante:
+			if (tiempo_inicial_atacante != minutos*60 + segundos and 
+				(tiempo_inicial_atacante - (minutos*60 + segundos - 1))%25 == 0 and 
+				turno_atacante):
 				regenerar_bloques()
 			if not pausar_cronometro:
 				segundos-=1
@@ -425,7 +546,8 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 			elif minutos <= 0 and segundos<=0:
 
 				if turno_atacante:
-					ventanaPrincipal.unbind("<Key>")
+					if destruidos["aguila"][0] == 0:
+						ganador(usr1)
 					messagebox.showinfo("Sin tiempo.", "Fin del juego.")
 				break
 			else:
@@ -440,50 +562,87 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 
 		return
 
-
 	#_______________________
-	#						\ 8. Cambiar turno \__________________________
+	#						\ Cambiar turno \__________________________
 
 	# Dar turno al atacante
 
-	dar_turno = tk.Button(canva_juego, text ="Turno Atacante", font ="Fixedsys 17", bg='grey', fg='black', command= lambda: turno_rol("atacante", turno_atacar))
+	dar_turno = tk.Button(canva_juego, text ="Turno Atacante", font ="Fixedsys 17", bg='grey', fg='black', 
+		command= lambda: turno_rol("atacante", turno_atacar))
 	#
 	dar_turno.place(x=160, y=500)
 	
+	# img_fo = Image.open("./semi_transparent.png")
+	# print(img_fo)
+	# resize_img = img_fo.resize((1700,900))
+	# imgFf = ImageTk.PhotoImage(resize_img)
+
+	# fondoJf = tk.Label(canva_juego, image = imgFf, bg="#000000")
+	# fondoJf.img_fo = imgFf
 	turno = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
 	titulo_turno = tk.Label(turno, text='',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 	titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
 
-	btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda: turno.place_forget())
+	btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', 
+		command=lambda: acep_inicio_turno())
 	btn_aceptar.place(relx=0.5, y=200, anchor=tk.CENTER )
+
+	def acep_inicio_turno():
+		global pausar_cronometro
+		pausar_cronometro = False
+		turno.place_forget()
+		for child in canva_juego.winfo_children():
+			child.configure(state=tk.NORMAL)
+		if not turno_atacante:
+			# Llama a la funcion colocarBloques si se hace clic sobre el area de juego
+			area_juego.bind("<Button-1>", colocarBloques)
+		else:
+			ventanaPrincipal.bind("<Key>", manejar_evento_teclado)
+		# fondoJf.place_forget()
+		# rect = canva_juego.create_rectangle(20, 50, 300, 100, outline="black", fill="red")
+		# canva_juego.tag_raise(rect)
+
+
 	def turno_rol(jugador, funcion):
 		if len(bloques_colocados["aguila"][1]) <= 0 and jugador == "atacante":
 			messagebox.showerror(title=f"Aguila no colocada.", 
 					message=f"Debe colocar el aguila antes de dar el turno al atacante."
 				)
 		else:
+			# fondoJf.place(x=0, y=0)
 			turno.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 			titulo_turno.configure(text=f'Turno de: {rol[jugador]}')
+			global pausar_cronometro
+			for child in canva_juego.winfo_children():
+				child.configure(state=tk.DISABLED)
+			pausar_cronometro = True
 			funcion()
 
 	def turno_defender():
 		global th
+
 		# Crea un thread separado para el cronometro
 		th = threading.Thread(target=cronometro)
 		th.start()
 		
 
 	def turno_atacar():
-		global th, turno_atacante
+		global th, turno_atacante, minutos, segundos, tiempo_inicial_atacante
 		turno_atacante = True
 		for bloque in bloques_colocados:
 			for i in range(len(bloques_colocados[bloque][1])):
-				bloques_regen[bloque][1].append(bloques_colocados[bloque][1][i])
 				bloques_regen[bloque][0].append(bloques_colocados[bloque][0][i])
+				bloques_regen[bloque][1].append(bloques_colocados[bloque][1][i])
+				if bloque == "concreto":
+					bloques_regen[bloque][2].append(6)
+				elif bloque == "acero":
+					bloques_regen[bloque][2].append(4)
+				else:
+					bloques_regen[bloque][2].append(2)
+
 		
 		dar_turno.place_forget()
 		area_juego.unbind("<Button-1>")
-		ventanaPrincipal.bind("<Key>", manejar_evento_teclado)
 		for elem in bloques_colocados:
 			for bloque in bloques_colocados[elem][1]:
 				bloque.unbind("<Button-1>")
@@ -491,26 +650,39 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 			bloque[4][0].configure(state=tk.DISABLED)
 
 		path = "./musica"
-		all_mp3 = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.mp3')]
+		all_songs = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.mp3')]
+		# la canción predeterminada para los jugadores está en la misma carpeta que el resto de canciones
+		# entonces se elimina de la lista que será utilizada en la lista de reproduccion
+		del all_songs[all_songs.index("./musica\\winner_default.mp3")]
 
-		random_song = random.choice(all_mp3)
+		random_song = random.choice(all_songs)
 		# musica fondo
 		my_sound = pygame.mixer.Sound(random_song)
-		pygame.mixer.Channel(0).play(my_sound)
+		pygame.mixer.Channel(3).play(my_sound)
 		my_sound.set_volume(0.4)
 		# duración de la canción en segundos
 		duracion_cancion = pygame.mixer.Sound(random_song).get_length()
-		global minutos, segundos
 		minutos, segundos = int(duracion_cancion//60), int(duracion_cancion%60 )
-		label_crono.configure(text=f"{minutos}:{segundos}")
+		tiempo_inicial_atacante = int(duracion_cancion//60)*60 + int(duracion_cancion%60)
+		if segundos//10 == 0 and minutos//10 == 0:
+			label_crono.configure(text=f"0{minutos}:0{segundos}")
+		elif  minutos//10 == 0:
+			label_crono.configure(text=f"0{minutos}:{segundos}")
+		elif  segundos//10 == 0:
+			label_crono.configure(text=f"{minutos}:0{segundos}")
+		else:
+			label_crono.configure(text=f"{minutos}:{segundos}")
 		if not colocar_bloques:
 			th = threading.Thread(target=cronometro)
 			th.start()
 		
-		
+	
 	# Llama a la funcion para dar el turno al defensor justo despues de que se ingresó a la pantalla de juego
 	turno_rol("defensor", turno_defender)
+	
 
+	#_______________________
+	#						\ Mover tanque \__________________________
 
 	# Lista de bombas
 	bombas = []
@@ -559,6 +731,8 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		area_juego.coords(tanque, x_tanque, y_tanque)
 
 
+	#_______________________
+	#						\ Disparo, eliminar bloques \__________________________
 
 	# Función para disparar
 	def animacion_disparo(direccion):
@@ -602,14 +776,79 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	
 		bomba = area_juego.create_image(bomba_x, bomba_y, image=image)
 		bombas.append((bomba, direccion_tanque))
-		#print(bomba)
-		# print(canva_juego.winfo_children())
 		
+	def revisa_colision(bomba, direccion, bomba_x, bomba_y, bombas_a_eliminar):
+		global recorrido_x, recorrido_y
+		ruta_img_bloque_roto = {
+			"concreto" : ["./imagenes/concreto2.png", "./imagenes/concreto3.png"],
+			"acero" : ["./imagenes/acero2.png"]
+		}	
+		for elem in bloques_colocados:
+			for i in range(len(bloques_colocados[elem][0])):
+				if (
+					bomba_x - 10 < bloques_colocados[elem][0][i][0] + dim_cuadros["y2"] and
+					bomba_x + 0 > bloques_colocados[elem][0][i][0] and
+					bomba_y - 10 < bloques_colocados[elem][0][i][1] + dim_cuadros["x2"] and
+					bomba_y + 0 > bloques_colocados[elem][0][i][1]
+				):
+					bloques_colocados[elem][2][i] -= 2
+					if bloques_colocados[elem][2][i] <= 0:
+						bombas_a_eliminar.append((bomba, direccion))
+						bloques_colocados[elem][1][i].place_forget()
+						destruidos[elem][0] += 1
+						destruidos[elem][3][0].configure(text=destruidos[elem][0])
+						if destruidos["aguila"][0] > 0:
+							if ganador(usr2):
+								messagebox.showinfo("Felicidades.", "Felicidades, has entrado al salón de la fama.")
+							else:
+								messagebox.showinfo("Buen juego.", "No has sido elegido para el salón de la fama.")
 
+
+						del bloques_colocados[elem][0][i]
+						del bloques_colocados[elem][1][i]
+						del bloques_colocados[elem][2][i]
+						#recorrido_x,recorrido_y = 0, 0
+						global puntos
+						if elem == "madera":
+							puntos += 10
+							label_puntos.configure(text=f"Puntos:{puntos}")
+						elif elem == "concreto":
+							puntos += 50
+							label_puntos.configure(text=f"Puntos:{puntos}")
+						elif elem == "acero":
+							puntos += 25
+							label_puntos.configure(text=f"Puntos:{puntos}")
+						elif elem == "aguila":
+							puntos += 200
+							label_puntos.configure(text=f"Puntos:{puntos}")
+						break
+
+					else:
+						bombas_a_eliminar.append((bomba, direccion))
+						#recorrido_x,recorrido_y = 0, 0
+						if elem == "concreto":
+							damaged_img = ""
+							if bloques_colocados[elem][2][i] >= 3:
+								damaged_img = Image.open(ruta_img_bloque_roto[elem][0])
+							else:
+								damaged_img = Image.open(ruta_img_bloque_roto[elem][1])
+							resize_damaged_img = damaged_img.resize((dim_cuadros["y2"], dim_cuadros["x2"]))
+							dmg_img = ImageTk.PhotoImage(resize_damaged_img)
+							bloques_colocados[elem][1][i].configure(image = dmg_img)
+							bloques_colocados[elem][1][i].dmg_img = dmg_img
+						elif elem == "acero":
+							damaged_img = Image.open(ruta_img_bloque_roto[elem][0])
+							resize_damaged_img = damaged_img.resize((dim_cuadros["y2"], dim_cuadros["x2"]))
+							dmg_img = ImageTk.PhotoImage(resize_damaged_img)
+							bloques_colocados[elem][1][i].configure(image = dmg_img)
+							bloques_colocados[elem][1][i].dmg_img = dmg_img
+					return True
+				#break
 
 	# Función para mover las bombas
-	def mover_bombas(recorrido_x, recorrido_y):
-		global bomba_en_movimiento
+	def mover_bombas():
+
+		global bomba_en_movimiento, recorrido_x, recorrido_y
 		bombas_a_eliminar = []
 		try:
 			bomba_x_inicial = area_juego.coords(bombas[0])[0]
@@ -634,53 +873,32 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 			bomba_coords = area_juego.coords(bomba)
 			bomba_x, bomba_y = bomba_coords[0], bomba_coords[1]
 
-			# Comprueba si la bomba está fuera de la pantalla y marca para eliminarla
-			if (bomba_x < 0 or bomba_x > 586 or bomba_y < 0 or bomba_y > 585 or recorrido_x >= 240 or recorrido_y >= 240):
-				bombas_a_eliminar.append((bomba, direccion))
-				recorrido_x, recorrido_y = 0, 0
-
-
-			for elem in bloques_colocados:
-				for i in range(len(bloques_colocados[elem][0])):
-					if (
-						bomba_x - 10 < bloques_colocados[elem][0][i][0] + dim_cuadros["y2"] and
-						bomba_x + 0 > bloques_colocados[elem][0][i][0] and
-						bomba_y - 10 < bloques_colocados[elem][0][i][1] + dim_cuadros["x2"] and
-						bomba_y + 0 > bloques_colocados[elem][0][i][1]
-					):
-						bombas_a_eliminar.append((bomba, direccion))
-						bloques_colocados[elem][1][i].place_forget()
-						destruidos[elem][0] += 1
-						destruidos[elem][3][0].configure(text=destruidos[elem][0])
-						del bloques_colocados[elem][0][i]
-						del bloques_colocados[elem][1][i]
-						recorrido_x,recorrido_y = 0, 0
-						global puntos
-						if elem == "madera":
-							puntos += 10
-							label_puntos.configure(text=f"Puntos:{puntos}")
-						elif elem == "concreto":
-							puntos += 50
-							label_puntos.configure(text=f"Puntos:{puntos}")
-						elif elem == "acero":
-							puntos += 25
-							label_puntos.configure(text=f"Puntos:{puntos}")
-						elif elem == "aguila":
-							puntos += 200
-							label_puntos.configure(text=f"Puntos:{puntos}")
-						break
-
+				
 
 			
+					
+			revisa_colision(bomba, direccion, bomba_x, bomba_y, bombas_a_eliminar)
+				
+			# Comprueba si la bomba está fuera de la pantalla y marca para eliminarla
+			if 	(bomba_x < 0 or bomba_x > 586
+			 	or bomba_y < 0 or bomba_y > 585
+			 	or recorrido_x >= 240 
+			 	or recorrido_y >= 240):
+				bombas_a_eliminar.append((bomba, direccion))
 
 
 
 		for bomba, direccion in bombas_a_eliminar:
-			bombas.remove((bomba, direccion))
-			area_juego.delete(bomba)
-			bomba_en_movimiento = False
+			# maneja el error de cuando una bala impacta en 2 bloques a la vez
+			try:
+				bombas.remove((bomba, direccion))
+				area_juego.delete(bomba)
+				bomba_en_movimiento = False
+				recorrido_x, recorrido_y = 0, 0
+			except ValueError:
+				pass
 
-		ventanaPrincipal.after(50, lambda: mover_bombas(recorrido_x, recorrido_y))
+		ventanaPrincipal.after(50, lambda: mover_bombas())
 
 	# Función para manejar los eventos del teclado
 	def manejar_evento_teclado(event):
@@ -702,24 +920,22 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 		elif direccion_tanque == 'right':
 			area_juego.itemconfig(tanque, image=circle_image_right)
 
-	# # Crear una ventana Tkinter
-	# ventana = tk.Tk()
-	# ventana.title("Juego con círculo")
-
-	# # Crear un lienzo (canvas) en la ventana
-	# canvas = tk.Canvas(area_juego, width=400, height=400, bg='green')
-	# canvas.pack()
 
 	# Cargar imágenes de círculo
 	circle_image_up = ImageTk.PhotoImage(Image.open("./tanque/tanque_arriba_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+	
 	circle_image_down = ImageTk.PhotoImage(Image.open("./tanque/tanque_abajo_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+	
 	circle_image_left = ImageTk.PhotoImage(Image.open("./tanque/tanque_izquierda_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+	
 	circle_image_right = ImageTk.PhotoImage(Image.open("./tanque/tanque_derecha_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+
 
 
 	# Dibujar el círculo
 	tanque = area_juego.create_image(x_tanque, y_tanque, image=circle_image_down, )
 	area_juego.tag_bind(tanque, '<Button-1>', '')
+
 
 	animacion_tanque = {
 		'up': [
@@ -752,6 +968,6 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1):
 	
 
 	# Iniciar el movimiento de las bombas
-	mover_bombas(0, 0)
+	mover_bombas()
 
 
