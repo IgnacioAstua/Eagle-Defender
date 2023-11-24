@@ -2,11 +2,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from VentanaJuego import ventanaJuego
 from PIL import Image, ImageTk #pip install pillow
-import pygame
-import os
-import threading
-import time
-import random
+import pygame # mixer para reproducir canciones
+import os #direcciones del sistema
+import threading # funciones de la playlist de musica
+import time # sleep , Clock tick
+import random # playlist en orden aleatoria
+#import shutil #copiar canciones favoritas a carpeta "favoritas"
 #Ventana Pricipal
 ventana1 = tk.Tk()
 
@@ -22,19 +23,6 @@ fondo1 = tk.PhotoImage(file = "./imagenes/fondo1.png")
 fondoP = tk.Label(canva1, image = fondo1)
 fondoP.place(x=0, y=0)
 
-
-# my_sound = pygame.mixer.Sound(datos[3])
-# pygame.mixer.Channel(3).play(my_sound)
-# my_sound.set_volume(0.7)
-
-# pygame.mixer.init()
-# musica_fondo = pygame.mixer.Sound(random_song)
-# pygame.mixer.Channel(3).play(musica_fondo, loops=-1)
-# musica_fondo.set_volume(0.7)
-
-# import pygame 
-
-# pygame.init() 
 
 
 def insert_into_playlist(playlist, music_file):
@@ -331,23 +319,35 @@ btn_registro.place(x=518, y=385)
 #Ventana de ajustes
 ajustes_canva = tk.Canvas(ventana1, width=664, height=465, bg='grey')
 musica_txt = tk.Label(ajustes_canva, text= 'Música', font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-musica_txt.place(x=275, y=25)
+musica_txt.place(relx=0.5, y=25, anchor=tk.N)
 mute = tk.Button(ajustes_canva, text='No', font= 'Fixedsys 20',bg='grey', fg='black')
 mute.place(x=400,y=80)
 unmute = tk.Button(ajustes_canva, text='Sí', font= 'Fixedsys 20',bg='grey', fg='black')
 unmute.place(x=220, y=80)
 volumen_txt = tk.Label(ajustes_canva, text= 'Volumen', font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-volumen_txt.place(x=270, y=175)
+volumen_txt.place(relx=0.5, y=175, anchor=tk.N)
 menos = tk.Button(ajustes_canva, text='-', font= 'Fixedsys 20',bg='grey', fg='black')
 menos.place(x=420,y=230)
 mas = tk.Button(ajustes_canva, text='+', font= 'Fixedsys 20',bg='grey', fg='black')
 mas.place(x=220, y=230)
-idioma_txt = tk.Label(ajustes_canva, text= 'Idioma', font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-idioma_txt.place(x=285, y=325)
-espanol = tk.Button(ajustes_canva, text='Español', font= 'Fixedsys 20',bg='grey', fg='black')
-espanol.place(x=400,y=380)
-ingles = tk.Button(ajustes_canva, text='English', font= 'Fixedsys 20',bg='grey', fg='black')
-ingles.place(x=150, y=380)
+tiempo_turno = tk.Label(ajustes_canva, text= 'Tiempo por turno', font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
+tiempo_turno.place(relx=0.5, y=325, anchor=tk.N)
+slider_tiempo = tk.Scale(ajustes_canva, label="0", from_="1", to="180", width=20, length=300, showvalue=0, 
+	orient=tk.HORIZONTAL, font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised',  command=lambda segundos: tiempo_en_min(int(segundos)))
+slider_tiempo.set(90)
+slider_tiempo.place(relx=0.5, y=380, anchor=tk.N)
+
+
+def tiempo_en_min(segundos):
+	if segundos%60//10 == 0 and segundos//60//10 == 0:
+		slider_tiempo.configure(label=f"0{segundos//60}:0{segundos%60}")
+	elif  segundos//60//10 == 0:
+		slider_tiempo.configure(label=f"0{segundos//60}:{segundos%60}")
+	elif  segundos%60//10 == 0:
+		slider_tiempo.configure(label=f"{segundos//60}:0{segundos%60}")
+	else:
+		slider_tiempo.configure(label=f"{segundos//60}:{segundos%60}")
+
 
 #Ventana salon de la fama
 salon_canva = tk.Canvas(ventana1, width=700, height=447)
@@ -447,13 +447,6 @@ Resistencia bloques:
  atacante al finalizar el tiempo."""
 
 
-ayuda = tk.Canvas(ventana1, width=900, height=563)
-fondo_ayuda = tk.Label(ayuda, image= fondo2)
-fondo_ayuda.place(x=0, y=0)
-titulo_ayuda = tk.Label(ayuda, text='Controles de juego:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-titulo_ayuda.place(relx=0.5, y=30, anchor=tk.CENTER)
-controles = tk.Label(ayuda, text=text_controles, font= 'Fixedsys 20', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
-controles.place(relx=0.5, y=70, anchor=tk.N)
 
 
 #Titulo principal
@@ -508,12 +501,59 @@ ajust.place(relx=0.5, y=625, anchor=tk.N)
 salir_ajustes=tk.Button(ajustes_canva, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: ajustes_canva.pack_forget())
 salir_ajustes.place(x=10,y=10)
 
+def jijijija():
+
+	ayuda = tk.Canvas(ventana1, width=900, height=563)
+	ayuda.pack(side= tk.TOP, pady=50)
+	fondo_ayuda = tk.Label(ayuda, image= fondo2)
+	fondo_ayuda.place(x=0, y=0)
+	titulo_ayuda = tk.Label(ayuda, text='Controles de juego:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
+	titulo_ayuda.place(relx=0.5, y=30, anchor=tk.CENTER)
+	controles = tk.Label(ayuda, text=text_controles, height=15, width=55, font= 'Fixedsys 17', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
+	controles.place(relx=0.5, y=70, anchor=tk.N)
+	controles2 = tk.Label(ayuda, text="yes", height=15, width=55, font= 'Fixedsys 17', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
+	controles2.place(relx=0.5, y=700, anchor=tk.N)
+	btn_previous = tk.Button(ayuda, text= 'Anterior', font= 'Fixedsys 16', bg='grey',fg='black', state=tk.DISABLED, command= lambda: siguiente_pag_controles(0, "previous"))
+	btn_previous.place(relx=0.5, y=545, anchor=tk.E)
+	btn_next = tk.Button(ayuda, text= 'Siguiente', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: siguiente_pag_controles(0, "next"))
+	btn_next.place(relx=0.5, y=545, anchor=tk.W)
+
+	def siguiente_pag_controles(i, btn):
+		btn_previous.configure(state=tk.DISABLED)
+		btn_next.configure(state=tk.DISABLED)
+		for i in range(64):
+			if btn == "next":
+				controles2.place(relx=0.5, y=700 - i*10, anchor=tk.N)
+			else:
+				controles2.place(relx=0.5, y=70 + i*10, anchor=tk.N)
+
+			time.sleep(0.001)
+			ventana1.update()
+		if btn == "next":
+			btn_previous.configure(state=tk.NORMAL)
+			btn_next.configure(state=tk.DISABLED)
+		else:
+			btn_previous.configure(state=tk.DISABLED)
+			btn_next.configure(state=tk.NORMAL)
+	ayuda_widgets = {
+		"ayuda"		:	ayuda, 
+		"controles2":	controles2, 
+		"btn_previous":	btn_previous, 
+		"btn_next"	:	btn_next
+		}
+	salir_ayuda=tk.Button(ayuda, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: salir_ventana_ayuda(ayuda_widgets))
+	salir_ayuda.place(x=10,y=10)
 
 #Boton de ayuda
-ayud = tk.Button(canva1, text ="Ayuda", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: ayuda.pack(side= tk.TOP, pady=50))
+ayud = tk.Button(canva1, text ="Ayuda", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: jijijija())
 ayud.place(relx=0.85, y=625, anchor=tk.N)
-salir_ayuda=tk.Button(ayuda, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: ayuda.pack_forget())
-salir_ayuda.place(x=10,y=10)
+
+#para que al salir de la ventana de ayuda regrese a la primera pagina de la misma
+def salir_ventana_ayuda(ayuda_widgets):
+	ayuda_widgets["ayuda"].pack_forget()
+	ayuda_widgets["controles2"].place(relx=0.5, y=700, anchor=tk.N)
+	ayuda_widgets["btn_previous"].configure(state=tk.DISABLED)
+	ayuda_widgets["btn_next"].configure(state=tk.NORMAL)
 
 #Boton de salida
 salirP=tk.Button(canva1, text = "Salir", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: on_closing())
@@ -590,6 +630,7 @@ def iniciarJuego():
 	else:
 		messagebox.showerror("Error", "Dos jugadores deben haber iniciado sesión para iniciar el juego.")
 
+
 def jugar():
 	canal = pygame.mixer
 	canva1.place_forget()
@@ -600,13 +641,13 @@ def jugar():
 		ventanaJuego(ventana1, usr2, usr1, rol, canva1, canal)
 	else:
 		rol["atacante"], rol["defensor"] = usr2[0], usr1[0]
-		ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal)
+		ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal, slider_tiempo.get())
 
 def jugar_rapido():
 	canal = pygame.mixer
 	canva1.place_forget()
 	rol = {"atacante":"Jugador 1", "defensor":"Jugador 2"}
-	ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal)
+	ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal, slider_tiempo.get())
 
 
 

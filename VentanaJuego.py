@@ -6,6 +6,7 @@ import time
 import threading
 import os
 import random
+import serial # conectar a Raspberry Pi Pico
 
 # Variables
 size_area_juego = {"width":600,"height":600}
@@ -25,11 +26,31 @@ pausar_cronometro = True
 bomba_en_movimiento = False
 tiempo_inicial_atacante = 0
 recorrido_x, recorrido_y = 0, 0
+tipo_bomba = ""
+Rpi_reading = True
+
+
 
 
 
 # Ventana Principal
-def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal):
+def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno):
+	global minutos, segundos, tiempo_inicial_atacante, Rpi_reading
+	minutos, segundos = tiempo_turno//60, tiempo_turno%60
+	tiempo_inicial_atacante = tiempo_turno
+	try:
+		Rpi = serial.Serial(port = "COM6", baudrate=115200)
+		try:
+			Rpi.Open()
+			print("conectado")
+		except:
+			if (Rpi.isOpen()):
+				print("conectado")
+			else:
+				print("no conectado")
+	except serial.SerialException:
+		Rpi_reading = False
+		print("no hay conexion seial")
 	
 	#___________________
 	#					\ Musica \___________________
@@ -111,8 +132,9 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal):
 
 
 	def ir_a_inicio():
-		global pausar_cronometro, turno_atacante, th, recorrido_x, recorrido_y,minutos, segundos, direccion_tanque, colocar_bloques,x_tanque,y_tanque, puntos, tiempo_inicial_atacante
+		global pausar_cronometro, turno_atacante, th, recorrido_x, recorrido_y,minutos, segundos, direccion_tanque, colocar_bloques,x_tanque,y_tanque, puntos, tiempo_inicial_atacante, Rpi_reading
 		th = threading.Thread(target=cronometro)
+		Rpi_reading = False
 		pausar_cronometro = True
 		turno_atacante = False
 		colocar_bloques = True
@@ -122,9 +144,13 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal):
 		canva_juego.destroy()
 		canva1.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 		pygame.mixer.Channel(3).stop()
+
 		time.sleep(1.2)
+
+		Rpi.close()
 		minutos, segundos = 1, 30
 		pausar_cronometro = False
+		Rpi_reading = True
 		puntos = 0
 		tiempo_inicial_atacante = 0
 		recorrido_x, recorrido_y = 0, 0
@@ -239,19 +265,25 @@ Resistencia bloques:
 
 	# La lista vacía en la posicion 4 de cada bloque se remplazará con la referencia al bloque en el inventario
 	bloques = [
-		["madera",	10,	(160, 350),	"./imagenes/madera.png"	,[]	],
-		["concreto",10,	(272, 350), 	"./imagenes/concreto1.png",[]	],
-		["acero", 	10,	(216, 350), 	"./imagenes/acero1.png"	,[]	],
-		["aguila", 	1,	(328, 350), 	"./imagenes/eagle.png"	,[]	],
+		["madera",	10,	(160, 350),	"./imagenes/madera.png"	,	[]	],
+		["concreto",10,	(272, 350), "./imagenes/concreto1.png",	[]	],
+		["acero", 	10,	(216, 350), "./imagenes/acero1.png"	,	[]	],
+		["aguila", 	1,	(328, 350), "./imagenes/eagle.png"	,	[]	],
 	]
 
 	destruidos = {
-		"madera":	[0,	(1150, 350),	"./imagenes/madera.png"	,[]	],
-		"concreto":	[0,	(1250, 350),	"./imagenes/concreto1.png",[]	],
-		"acero":	[0,	(1200, 350), 	"./imagenes/acero1.png"	,[]	],
-		"aguila":	[0,	(1300, 350), 	"./imagenes/eagle.png"	,[]	],
+		"madera":	[0,	(1150, 350),	"./imagenes/madera.png"	,	[]	],
+		"concreto":	[0,	(1250, 350),	"./imagenes/concreto1.png",	[]	],
+		"acero":	[0,	(1200, 350), 	"./imagenes/acero1.png"	,	[]	],
+		"aguila":	[0,	(1300, 350), 	"./imagenes/eagle.png"	,	[]	],
+	}
+	bombas_restantes = {
+		"agua":		[5,	(1150, 425),	"./tanque/bola_agua.png",	[]	],
+		"fuego":	[5,	(1250, 425),	"./tanque/bola_fuego.png",	[]	],
+		"bomba":	[5,	(1200, 425), 	"./tanque/bomba.png",		[]	],
 	}
 
+	# mostrar bloques disponibles
 	var = tk.IntVar(canva_juego, 3) # Usado para guardar el valor de el Radiobutton seleccionado
 
 	label_inventario = tk.Label(canva_juego, text="Inventario", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
@@ -270,6 +302,8 @@ Resistencia bloques:
 		Rbtn_bloque.place(x=bloque[2][0], y=bloque[2][1])
 		bloque[4] = [Rbtn_bloque] # Agrega referencia del widget a bloques[i][4]
 
+	# mostrar bloques destruidos
+
 	label_destruidos = tk.Label(canva_juego, text="Bloques\ndestruidos", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
 	label_destruidos.place(x=1150, y=220)
 	for bloque in destruidos:
@@ -287,6 +321,22 @@ Resistencia bloques:
 
 	label_puntos = tk.Label(canva_juego, text=f"Puntos:{puntos}", font = "Fixedsys 30 ",bg= "grey", fg='black', relief= 'raised')
 	label_puntos.place(x=1150, y=500)
+
+	#mostrar bombas en inventario
+
+	for bomba in bombas_restantes:
+		img_bomba = Image.open(bombas_restantes[bomba][2]) 
+		resize_image = img_bomba.resize((50,50)) # ajusta tamaño de imagen
+		img = ImageTk.PhotoImage(resize_image)
+
+		label_bomba = tk.Label(canva_juego, text=bombas_restantes[bomba][0], font="Fixedsys 20", image = img, 
+			height=50, width=50, borderwidth=0,compound="center", relief=tk.FLAT
+		)
+		if bomba == "bomba":
+			label_bomba.configure(fg="white")
+		label_bomba.img_bomba = img
+		label_bomba.place(x=bombas_restantes[bomba][1][0], y=bombas_restantes[bomba][1][1])
+		bombas_restantes[bomba][3] = [label_bomba] # Agrega referencia del widget a bloques[i][4]
 	#_______________________
 	#						\ Colocar bloques \__________________________
 	"""
@@ -452,13 +502,19 @@ Resistencia bloques:
 					bloques_colocados[bloque][0].append(bloques_regen[bloque][0][i])
 					bloques_colocados[bloque][1].append(bloques_regen[bloque][1][i])
 					bloques_colocados[bloque][2].append(bloques_regen[bloque][2][i])
-					print(bloques_colocados[bloque][2], bloques_regen[bloque][2][i])
 
 				bloques_colocados[bloque][2][i] = bloques_regen[bloque][2][i]
 				
 					
 
-				
+	#_______________________
+	#						\ Regenerar bombas \__________________________
+
+	def regenerar_bombas():
+		for bomba in bombas_restantes:
+			bombas_restantes[bomba][0] = 5
+			bombas_restantes[bomba][3][0].configure(text=bombas_restantes[bomba][0])
+			
 
 	#_______________________
 	#						\ Mostrar ganador \__________________________
@@ -532,6 +588,10 @@ Resistencia bloques:
 				(tiempo_inicial_atacante - (minutos*60 + segundos - 1))%25 == 0 and 
 				turno_atacante):
 				regenerar_bloques()
+			if (tiempo_inicial_atacante != minutos*60 + segundos and 
+				(tiempo_inicial_atacante - (minutos*60 + segundos - 1))%30 == 0 and 
+				turno_atacante):
+				regenerar_bombas()
 			if not pausar_cronometro:
 				segundos-=1
 			if segundos >= 0:
@@ -563,6 +623,10 @@ Resistencia bloques:
 		return
 
 	#_______________________
+	#						\ Guardar Partida \__________________________
+
+
+	#_______________________
 	#						\ Cambiar turno \__________________________
 
 	# Dar turno al atacante
@@ -583,6 +647,7 @@ Resistencia bloques:
 	titulo_turno = tk.Label(turno, text='',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 	titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
 
+	
 	btn_aceptar = tk.Button(turno, text='Aceptar', font= 'Fixedsys 20',bg='grey', fg='black', 
 		command=lambda: acep_inicio_turno())
 	btn_aceptar.place(relx=0.5, y=200, anchor=tk.CENTER )
@@ -660,10 +725,7 @@ Resistencia bloques:
 		my_sound = pygame.mixer.Sound(random_song)
 		pygame.mixer.Channel(3).play(my_sound)
 		my_sound.set_volume(0.4)
-		# duración de la canción en segundos
-		duracion_cancion = pygame.mixer.Sound(random_song).get_length()
-		minutos, segundos = int(duracion_cancion//60), int(duracion_cancion%60 )
-		tiempo_inicial_atacante = int(duracion_cancion//60)*60 + int(duracion_cancion%60)
+		minutos, segundos = tiempo_turno//60, tiempo_turno%60
 		if segundos//10 == 0 and minutos//10 == 0:
 			label_crono.configure(text=f"0{minutos}:0{segundos}")
 		elif  minutos//10 == 0:
@@ -681,6 +743,65 @@ Resistencia bloques:
 	turno_rol("defensor", turno_defender)
 	
 
+
+	#_______________________
+	#						\ Usar control \__________________________
+
+
+
+	#Rpi = serial.Serial(port = "COM6", baudrate=115200)
+
+
+	def loop_control():
+
+		while Rpi_reading :
+			if (Rpi.isOpen()):
+				dt=Rpi.readline() #Esto se recibe en bytes.
+				Dt_s = dt.decode('UTF-8') #Conversión de Byte a String
+				print(Dt_s)
+				if "arriba" in Dt_s:
+					mover_tanque_con_joystick("arriba")
+				elif "abajo" in Dt_s:
+					mover_tanque_con_joystick("abajo")
+				elif "izquierda" in Dt_s:
+					mover_tanque_con_joystick("izquierda")
+				elif "derecha" in Dt_s:
+					mover_tanque_con_joystick("derecha")
+				else:
+					pass
+
+				global bomba_en_movimiento, tipo_bomba
+				if "agua" in Dt_s and not bomba_en_movimiento:
+					bomba_en_movimiento = True
+					tipo_bomba = "agua"
+					animacion_disparo(direccion_tanque, bola_agua_image)
+				elif "fuego" in Dt_s and not bomba_en_movimiento:
+					bomba_en_movimiento = True
+					tipo_bomba = "fuego"
+					animacion_disparo(direccion_tanque, bola_fuego_image)
+				elif "bomba" in Dt_s and not bomba_en_movimiento:
+					bomba_en_movimiento = True
+					tipo_bomba = "bomba"
+					animacion_disparo(direccion_tanque, bomba_image)
+
+				# if (Dt_s[0]=="%"):
+				#     btn=(Dt_s[1:-1])
+				#     print (btn)
+					
+			#text_x = font.render('Datos X '+Rx, True, green, blue)
+			#text_y = font.render('Datos Y '+Ry, True, green, blue)
+
+			#display_surface.blit(text_x, textRect_x)
+			#display_surface.blit(text_y, textRect_y)
+			
+			# for event in pygame.event.get() :
+			#     if event.type == pygame.QUIT :
+			#         pygame.quit()
+			#         
+			#         quit() 
+			# pygame.display.update() 
+	Rpi_thread = threading.Thread(target=loop_control)
+	Rpi_thread.start()
 	#_______________________
 	#						\ Mover tanque \__________________________
 
@@ -731,45 +852,87 @@ Resistencia bloques:
 		area_juego.coords(tanque, x_tanque, y_tanque)
 
 
+	def mover_tanque_con_joystick(direccion_joystick):
+		global x_tanque, y_tanque, direccion_tanque
+
+		# Calcula las nuevas coordenadas del tanque según la dirección
+		nueva_x = x_tanque
+		nueva_y = y_tanque
+
+		if direccion_joystick == "arriba" and y_tanque > 15:
+			nueva_y -= 10
+			direccion_tanque = 'up'
+		elif direccion_joystick == "izquierda" and x_tanque > 16:
+			nueva_x -= 10
+			direccion_tanque = 'left'
+		elif direccion_joystick == "abajo" and y_tanque < 585:
+			nueva_y += 10
+			direccion_tanque = 'down'
+		elif direccion_joystick == "derecha" and x_tanque < 586:
+			nueva_x += 10
+			direccion_tanque = 'right'
+		elif direccion_joystick == "nulo":
+			pass
+
+		# Verifica la colisión con bloques colocados
+		colision = False
+
+		for elem in bloques_colocados:
+			for coords in bloques_colocados[elem][0]:
+				if (
+					nueva_x - 10< coords[0] + dim_cuadros["y2"] and
+					nueva_x + 10 > coords[0] and
+					nueva_y - 10< coords[1] + dim_cuadros["x2"] and
+					nueva_y + 10 > coords[1]
+				):
+					colision = True
+					break
+
+		# Si no hay colisión, actualiza la posición del tanque
+		if not colision:
+			x_tanque = nueva_x
+			y_tanque = nueva_y
+
+		actualizar_imagen_tanque()
+		area_juego.coords(tanque, x_tanque, y_tanque)
+
+
 	#_______________________
 	#						\ Disparo, eliminar bloques \__________________________
 
 	# Función para disparar
-	def animacion_disparo(direccion):
+	def animacion_disparo(direccion, imagen):
 		frames = animacion_tanque[direccion]
 		for frame in frames:
 			area_juego.itemconfig(tanque, image=frame)
 			ventanaPrincipal.update()
 			ventanaPrincipal.after(100)  # Espera 100 milisegundos antes de cambiar al siguiente frame
 		# Cambia la imagen del tanque de nuevo a la dirección original
-		area_juego.itemconfig(tanque, image=circle_image_up if direccion == 'up' else
-										circle_image_down if direccion == 'down' else
-										circle_image_left if direccion == 'left' else
-										circle_image_right)
+		area_juego.itemconfig(tanque, image=tanque_image_up if direccion == 'up' else
+										tanque_image_down if direccion == 'down' else
+										tanque_image_left if direccion == 'left' else
+										tanque_image_right)
 		# Una vez completada la animación, dispara la bomba
 		pygame.mixer.Channel(1).play(pygame.mixer.Sound('./tanque/sonido_bomba.wav'))
-		disparar()
+		disparar(imagen)
 
-	def disparar():
+	def disparar(imagen):
 		global direccion_tanque
 
 		#if len(bombas) == 0:
 		if direccion_tanque == 'up':
 			bomba_x = x_tanque
 			bomba_y = y_tanque - 10
-			image = bomba_image_up
 		elif direccion_tanque == 'down':
 			bomba_x = x_tanque
 			bomba_y = y_tanque + 10
-			image = bomba_image_down
 		elif direccion_tanque == 'left':
 			bomba_x = x_tanque - 10
 			bomba_y = y_tanque
-			image = bomba_image_left
 		elif direccion_tanque == 'right':
 			bomba_x = x_tanque + 10
 			bomba_y = y_tanque
-			image = bomba_image_right
+		image = imagen
 
 
 
@@ -791,7 +954,12 @@ Resistencia bloques:
 					bomba_y - 10 < bloques_colocados[elem][0][i][1] + dim_cuadros["x2"] and
 					bomba_y + 0 > bloques_colocados[elem][0][i][1]
 				):
-					bloques_colocados[elem][2][i] -= 2
+					if tipo_bomba == "agua":
+						bloques_colocados[elem][2][i] -= 2
+					elif tipo_bomba == "fuego":
+						bloques_colocados[elem][2][i] -= 3
+					elif tipo_bomba == "bomba":
+						bloques_colocados[elem][2][i] -= 6
 					if bloques_colocados[elem][2][i] <= 0:
 						bombas_a_eliminar.append((bomba, direccion))
 						bloques_colocados[elem][1][i].place_forget()
@@ -828,7 +996,7 @@ Resistencia bloques:
 						#recorrido_x,recorrido_y = 0, 0
 						if elem == "concreto":
 							damaged_img = ""
-							if bloques_colocados[elem][2][i] >= 3:
+							if bloques_colocados[elem][2][i] > 3:
 								damaged_img = Image.open(ruta_img_bloque_roto[elem][0])
 							else:
 								damaged_img = Image.open(ruta_img_bloque_roto[elem][1])
@@ -881,9 +1049,9 @@ Resistencia bloques:
 				
 			# Comprueba si la bomba está fuera de la pantalla y marca para eliminarla
 			if 	(bomba_x < 0 or bomba_x > 586
-			 	or bomba_y < 0 or bomba_y > 585
-			 	or recorrido_x >= 240 
-			 	or recorrido_y >= 240):
+				or bomba_y < 0 or bomba_y > 585
+				or recorrido_x >= 240 
+				or recorrido_y >= 240):
 				bombas_a_eliminar.append((bomba, direccion))
 
 
@@ -902,38 +1070,61 @@ Resistencia bloques:
 
 	# Función para manejar los eventos del teclado
 	def manejar_evento_teclado(event):
-		global bomba_en_movimiento
+		global bomba_en_movimiento, tipo_bomba
 		mover_tanque(event)
-		if event.keysym == 'space' and not bomba_en_movimiento:
-			# Dispara la animación antes de disparar la bomba
-			bomba_en_movimiento = True
-			animacion_disparo(direccion_tanque)
+		if event.keysym == 'j' and not bomba_en_movimiento:
+			tipo_bomba = "agua"
+			if bombas_restantes[tipo_bomba][0] <= 0:
+				messagebox.showinfo("Sin bolas de agua", "No tiene bolas de agua por el momento.")
+			else:
+				bomba_en_movimiento = True
+				bombas_restantes[tipo_bomba][0] -= 1
+				bombas_restantes[tipo_bomba][3][0].configure(text=bombas_restantes[tipo_bomba][0])
+				animacion_disparo(direccion_tanque, bola_agua_image)
+		elif event.keysym == 'k' and not bomba_en_movimiento:
+			tipo_bomba = "fuego"
+			if bombas_restantes[tipo_bomba][0] <= 0:
+				messagebox.showinfo("Sin bolas de agua", "No tiene bolas de agua por el momento.")
+			else:
+				bomba_en_movimiento = True
+				bombas_restantes[tipo_bomba][0] -= 1
+				bombas_restantes[tipo_bomba][3][0].configure(text=bombas_restantes[tipo_bomba][0])
+				animacion_disparo(direccion_tanque, bola_fuego_image)
+		elif event.keysym == 'l' and not bomba_en_movimiento:
+			tipo_bomba = "bomba"
+			if bombas_restantes[tipo_bomba][0] <= 0:
+				messagebox.showinfo("Sin bolas de agua", "No tiene bolas de agua por el momento.")
+			else:
+				bomba_en_movimiento = True
+				bombas_restantes[tipo_bomba][0] -= 1
+				bombas_restantes[tipo_bomba][3][0].configure(text=bombas_restantes[tipo_bomba][0])
+				animacion_disparo(direccion_tanque, bomba_image)
 
 	# Actualizar la imagen del círculo según la dirección
 	def actualizar_imagen_tanque():
 		if direccion_tanque == 'up':
-			area_juego.itemconfig(tanque, image=circle_image_up)
+			area_juego.itemconfig(tanque, image=tanque_image_up)
 		elif direccion_tanque == 'down':
-			area_juego.itemconfig(tanque, image=circle_image_down)
+			area_juego.itemconfig(tanque, image=tanque_image_down)
 		elif direccion_tanque == 'left':
-			area_juego.itemconfig(tanque, image=circle_image_left)
+			area_juego.itemconfig(tanque, image=tanque_image_left)
 		elif direccion_tanque == 'right':
-			area_juego.itemconfig(tanque, image=circle_image_right)
+			area_juego.itemconfig(tanque, image=tanque_image_right)
 
 
 	# Cargar imágenes de círculo
-	circle_image_up = ImageTk.PhotoImage(Image.open("./tanque/tanque_arriba_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+	tanque_image_up = ImageTk.PhotoImage(Image.open("./tanque/tanque_arriba_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
 	
-	circle_image_down = ImageTk.PhotoImage(Image.open("./tanque/tanque_abajo_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+	tanque_image_down = ImageTk.PhotoImage(Image.open("./tanque/tanque_abajo_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
 	
-	circle_image_left = ImageTk.PhotoImage(Image.open("./tanque/tanque_izquierda_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+	tanque_image_left = ImageTk.PhotoImage(Image.open("./tanque/tanque_izquierda_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
 	
-	circle_image_right = ImageTk.PhotoImage(Image.open("./tanque/tanque_derecha_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
+	tanque_image_right = ImageTk.PhotoImage(Image.open("./tanque/tanque_derecha_.png").resize((dim_cuadros["y2"], dim_cuadros["x2"])))
 
 
 
-	# Dibujar el círculo
-	tanque = area_juego.create_image(x_tanque, y_tanque, image=circle_image_down, )
+	# Dibujar el tanque
+	tanque = area_juego.create_image(x_tanque, y_tanque, image=tanque_image_down, )
 	area_juego.tag_bind(tanque, '<Button-1>', '')
 
 
@@ -961,10 +1152,9 @@ Resistencia bloques:
 	}
 
 	# Cargar imágenes de bombas
-	bomba_image_up = ImageTk.PhotoImage(Image.open("./tanque/bomba_3.png"))#.resize((dim_cuadros["y2"], dim_cuadros["x2"]))
-	bomba_image_down = ImageTk.PhotoImage(Image.open("./tanque/bomba_3.png"))#.resize((dim_cuadros["y2"], dim_cuadros["x2"]))
-	bomba_image_left = ImageTk.PhotoImage(Image.open("./tanque/bomba_3.png"))#.resize((dim_cuadros["y2"], dim_cuadros["x2"]))
-	bomba_image_right = ImageTk.PhotoImage(Image.open("./tanque/bomba_3.png"))#.resize((dim_cuadros["y2"], dim_cuadros["x2"]))
+	bola_agua_image = ImageTk.PhotoImage(Image.open("./tanque/bola_agua.png"))
+	bola_fuego_image = ImageTk.PhotoImage(Image.open("./tanque/bola_fuego.png"))
+	bomba_image = ImageTk.PhotoImage(Image.open("./tanque/bomba.png"))
 	
 
 	# Iniciar el movimiento de las bombas
