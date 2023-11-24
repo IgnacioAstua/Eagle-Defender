@@ -551,9 +551,16 @@ Resistencia bloques:
 				for linea in lineas:
 					datos = linea.strip().split(',')
 					tiempos.append(datos)
-				tiempos.append([str(tiempo_tardado),jugador[0],jugador[5],jugador[6]])
-				tiempos.sort(key=lambda x: int(x[0]))
-				tiempos = tiempos[:5]
+				print(len(lineas))
+				if len(tiempos) <= 1:
+					tiempos.append([str(tiempo_tardado),jugador[0],jugador[5],jugador[6]])
+				elif len(tiempos) < 5:
+					tiempos.append([str(tiempo_tardado),jugador[0],jugador[5],jugador[6]])
+					tiempos.sort(key=lambda x: int(x[0]))
+				else:
+					tiempos.append([str(tiempo_tardado),jugador[0],jugador[5],jugador[6]])
+					tiempos.sort(key=lambda x: int(x[0]))
+					tiempos = tiempos[:5]
 				print(tiempos)
 				if [str(tiempo_tardado),jugador[0],jugador[5],jugador[6]] in tiempos:
 					elegible = True
@@ -625,6 +632,24 @@ Resistencia bloques:
 	#_______________________
 	#						\ Guardar Partida \__________________________
 
+	def guardar_partida():
+		with open('partidas_guardadas.txt', 'w+') as partidas_guardadas:
+			lineas = partidas_guardadas.readlines()
+			lineas.insert(0, "si")
+			lineas = lineas[:3]
+			for linea in lineas:
+				datos = linea.strip().split(',')
+				tiempos.append(datos)
+			tiempos.append([str(tiempo_tardado),jugador[0],jugador[5],jugador[6]])
+			tiempos = tiempos[:5]
+			print(tiempos)
+			if [str(tiempo_tardado),jugador[0],jugador[5],jugador[6]] in tiempos:
+				elegible = True
+
+		with open('partidas_guardadas.txt', 'w') as partidas_guardadas:
+			partidas_guardadas.seek(0)
+			for linea in tiempos:
+				partidas_guardadas.writelines(f"{linea[0]},{linea[1]},{linea[2]},{linea[3]}\n")
 
 	#_______________________
 	#						\ Cambiar turno \__________________________
