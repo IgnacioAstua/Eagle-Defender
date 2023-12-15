@@ -7,6 +7,8 @@ import threading
 import os
 import random
 import serial # conectar a Raspberry Pi Pico
+import json
+
 
 # Variables
 size_area_juego = {"width":600,"height":600}
@@ -28,14 +30,17 @@ tiempo_inicial_atacante = 0
 recorrido_x, recorrido_y = 0, 0
 tipo_bomba = ""
 Rpi_reading = True
+dt=""
+pausa = ""
 
 
 
 
 
 # Ventana Principal
-def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno):
-	global minutos, segundos, tiempo_inicial_atacante, Rpi_reading
+def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno, ventanas_de_ayuda, text1, text2, 
+	salon):
+	global minutos, segundos, tiempo_inicial_atacante, Rpi_reading, pausa
 	minutos, segundos = tiempo_turno//60, tiempo_turno%60
 	tiempo_inicial_atacante = tiempo_turno
 	try:
@@ -57,6 +62,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno)
 
 	path = "./musica"
 	all_songs = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.mp3')]
+	del all_songs[all_songs.index("./musica\\winner_default.mp3")]
 
 	random_song = random.choice(all_songs)
 	pygame.mixer.init()
@@ -92,8 +98,8 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno)
 		command=lambda:pausar_juego())
 	pausar.place(x=100,y=30)
 
-	def continuar_juego(pausa):
-		global pausar_cronometro
+	def continuar_juego():
+		global pausar_cronometro, pausa
 		pausar_cronometro = False
 		pausa.place_forget()
 		for child in canva_juego.winfo_children():
@@ -104,7 +110,7 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno)
 			ventanaPrincipal.bind("<Key>", manejar_evento_teclado)
 
 	def pausar_juego():
-		global pausar_cronometro
+		global pausar_cronometro, pausa
 		pausar_cronometro = True
 		for child in canva_juego.winfo_children():
 			child.configure(state=tk.DISABLED)
@@ -114,25 +120,32 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno)
 			ventanaPrincipal.unbind("<Key>")
 		#pausar.configure(state=tk.DISABLED)
 		# ventana de pausa
-		pausa = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
 		pausa.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
 		continuar=tk.Button(pausa, text= 'Continuar partida', font= 'Fixedsys 20', bg='grey',fg='black', 
-			command=lambda:continuar_juego(pausa))
+			command=lambda:continuar_juego())
 		continuar.place(relx=0.5, y=70, anchor=tk.CENTER )
 
 		controles=tk.Button(pausa, text= 'Ayuda', font= 'Fixedsys 20', bg='grey',fg='black', 
-			command=lambda:vent_ayuda())
+			command=lambda:ventanas_de_ayuda(text1, text2))
 		controles.place(relx=0.5, y=150, anchor=tk.CENTER )
+
+		S_fama=tk.Button(pausa, text= 'Salón de la fama', font= 'Fixedsys 20', bg='grey',fg='black', 
+			command=lambda:salon())
+		S_fama.place(relx=0.5, y=230, anchor=tk.CENTER )
+
+		guardar=tk.Button(pausa, text= 'Guardar', font= 'Fixedsys 20', bg='grey',fg='black', 
+			command=lambda:guardar_partida(bloques_colocados))
+		guardar.place(relx=0.5, y=310, anchor=tk.CENTER )
 
 		volver_inicio=tk.Button(pausa, text= 'Volver a inicio', font= 'Fixedsys 20', bg='grey',fg='black', 
 			command=lambda:ir_a_inicio())
-		volver_inicio.place(relx=0.5, y=240, anchor=tk.CENTER )
+		volver_inicio.place(relx=0.5, y=390, anchor=tk.CENTER )
 
 
 
 	def ir_a_inicio():
-		global pausar_cronometro, turno_atacante, th, recorrido_x, recorrido_y,minutos, segundos, direccion_tanque, colocar_bloques,x_tanque,y_tanque, puntos, tiempo_inicial_atacante, Rpi_reading
+		global pausar_cronometro,turno_atacante, th, recorrido_x, recorrido_y,minutos, segundos, direccion_tanque, colocar_bloques,x_tanque,y_tanque, puntos, tiempo_inicial_atacante, Rpi_reading
 		th = threading.Thread(target=cronometro)
 		Rpi_reading = False
 		pausar_cronometro = True
@@ -183,37 +196,14 @@ def ventanaJuego(ventanaPrincipal, usr1, usr2, rol, canva1, canal, tiempo_turno)
 
 	#_______________
 	#				\ Ventana ayuda \_______________
-	def vent_ayuda():
-		text_controles = """Teclas:
- - W: mover tanque hacia arriba
- - A: mover tanque hacia la izquierda
- - S: mover tanque hacia abajo
- - D: mover tanque hacia la derecha
- - Espacio: disparar
-Resistencia bloques:
- - Concreto: 1 bomba, 2 bolas de fuego, 2 bolas de agua
- - Acero: 1 bomba, 1 bolas de fuego, 2 bolas de agua
- - Madera: 1 de cualquier tipo de poder
-¿Cómo ganar? (según el rol)
- - Atacante: derrivando el aguila antes de que finalice
- el tiempo.
- - Defensor: si el aguila no fue derribada por el 
- atacante al finalizar el tiempo."""
-
-		ayuda = tk.Canvas(ventanaPrincipal, width=900, height=563)
-		ayuda.pack(side= tk.TOP, pady=50)
-		fondo2 = Image.open("./imagenes/inicio.png")
-		f2 = ImageTk.PhotoImage(fondo2)
-		fondo_ayuda = tk.Label(ayuda, image=f2)
-		fondo_ayuda.image = f2
-		fondo_ayuda.place(x=0, y=0)
-		titulo_ayuda = tk.Label(ayuda, text='Controles de juego:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
-		titulo_ayuda.place(relx=0.5, y=30, anchor=tk.CENTER)
-		controles = tk.Label(ayuda, text=text_controles, font= 'Fixedsys 20', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
-		controles.place(relx=0.5, y=70, anchor=tk.N)
-		salir_ayuda=tk.Button(ayuda, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', 
-			command = lambda: ayuda.pack_forget())
-		salir_ayuda.place(x=10, y=10)
+	
+	
+	#para que al salir de la ventana de ayuda regrese a la primera pagina de la misma
+	def salir_ventana_ayuda(ayuda_widgets):
+		ayuda_widgets["ayuda"].pack_forget()
+		ayuda_widgets["controles2"].place(relx=0.5, y=700, anchor=tk.N)
+		ayuda_widgets["btn_previous"].configure(state=tk.DISABLED)
+		ayuda_widgets["btn_next"].configure(state=tk.NORMAL)
 
 	#_______________
 	#				\ Nombres de jugadores en pantalla de juego \_______________
@@ -279,8 +269,8 @@ Resistencia bloques:
 	}
 	bombas_restantes = {
 		"agua":		[5,	(1150, 425),	"./tanque/bola_agua.png",	[]	],
-		"fuego":	[5,	(1250, 425),	"./tanque/bola_fuego.png",	[]	],
-		"bomba":	[5,	(1200, 425), 	"./tanque/bomba.png",		[]	],
+		"fuego":	[5,	(1200, 425),	"./tanque/bola_fuego.png",	[]	],
+		"bomba":	[5,	(1250, 425), 	"./tanque/bomba.png",		[]	],
 	}
 
 	# mostrar bloques disponibles
@@ -337,6 +327,11 @@ Resistencia bloques:
 		label_bomba.img_bomba = img
 		label_bomba.place(x=bombas_restantes[bomba][1][0], y=bombas_restantes[bomba][1][1])
 		bombas_restantes[bomba][3] = [label_bomba] # Agrega referencia del widget a bloques[i][4]
+
+
+
+
+	pausa = tk.Canvas(canva_juego, width=700, height=450, bg="#a2a2a2")
 	#_______________________
 	#						\ Colocar bloques \__________________________
 	"""
@@ -632,24 +627,70 @@ Resistencia bloques:
 	#_______________________
 	#						\ Guardar Partida \__________________________
 
-	def guardar_partida():
-		with open('partidas_guardadas.txt', 'w+') as partidas_guardadas:
-			lineas = partidas_guardadas.readlines()
-			lineas.insert(0, "si")
-			lineas = lineas[:3]
-			for linea in lineas:
-				datos = linea.strip().split(',')
-				tiempos.append(datos)
-			tiempos.append([str(tiempo_tardado),jugador[0],jugador[5],jugador[6]])
-			tiempos = tiempos[:5]
-			print(tiempos)
-			if [str(tiempo_tardado),jugador[0],jugador[5],jugador[6]] in tiempos:
-				elegible = True
+	def guardar_partida(bc):
+		
+		datos_guardados = [
+		str(puntos), #0
+		str(bloques_colocados["madera"][0]), str(bloques_colocados["madera"][2]), #1
+		str(bloques_colocados["acero"][0]), str(bloques_colocados["acero"][2]), #4
+		str(bloques_colocados["concreto"][0]), str(bloques_colocados["concreto"][2]), #7
+		str(bloques_colocados["aguila"][0]), str(bloques_colocados["aguila"][2]), #10
+		str(bloques_regen["madera"][0]), str(bloques_regen["madera"][2]), #13
+		str(bloques_regen["acero"][0]), str(bloques_regen["acero"][2]), #16
+		str(bloques_regen["concreto"][0]), str(bloques_regen["concreto"][2]), #19
+		str(bloques_regen["aguila"][0]), str(bloques_regen["aguila"][2]), #22
+		str(tiempo_turno), #23
+		str(tiempo_inicial_atacante),
+		str(minutos),
+		str(segundos),
+		str(bombas_restantes["agua"][0]),
+		str(bombas_restantes["fuego"][0]),
+		str(bombas_restantes["bomba"][0]),
+		str(colocar_bloques),
+		str(turno_atacante),
+		str(x_tanque),
+		str(y_tanque),
+		str(direccion_tanque),
+		str(usr1[0]),str(usr1[1]),str(usr1[2]),str(usr1[3]),str(usr1[4]),str(usr1[5]),str(usr1[6]),
+		str(usr2[0]),str(usr2[1]),str(usr2[2]),str(usr2[3]),str(usr2[4]),str(usr2[5]),str(usr2[6]),
+		str(bloques[0][1]),
+		str(bloques[1][1]),
+		str(bloques[2][1]),
+		str(bloques[3][1]),
+		str(destruidos["madera"][0]),
+		str(destruidos["concreto"][0]),
+		str(destruidos["acero"][0]),
+		str(destruidos["aguila"][0])
+		]
+		
 
-		with open('partidas_guardadas.txt', 'w') as partidas_guardadas:
-			partidas_guardadas.seek(0)
-			for linea in tiempos:
-				partidas_guardadas.writelines(f"{linea[0]},{linea[1]},{linea[2]},{linea[3]}\n")
+		with open('partida_guardada_3.json', 'w') as partida_guardada_3:
+			with open('partida_guardada_2.json', 'r') as partida_guardada_2:
+				new_dict2 = json.load(partida_guardada_2)
+			json.dump(new_dict2, partida_guardada_3)
+			
+
+		with open('partida_guardada_2.json', 'w') as partida_guardada_2:
+			with open('partida_guardada_1.json', 'r') as partida_guardada_1:
+				new_dict1 = json.load(partida_guardada_1)
+			json.dump(new_dict1, partida_guardada_2)
+			
+
+		with open('partida_guardada_1.json', 'w') as partida_guardada_1:
+			json.dump(datos_guardados, partida_guardada_1)
+		
+
+	# car_partida = tk.Button(canva_juego, text ="cargar_partida", font ="Fixedsys 17", bg='grey', fg='black', 
+	# 	command= lambda: cargar_partida())
+	# car_partida.place(x=160, y=600)
+	# def cargar_partida():
+	# 	with open('partida_guardada_1.json', 'r') as partida_guardada_1:
+	# 		new_dict1 = json.load(partida_guardada_1)
+	# 		new_dict1_list = new_dict1[5][1:].split(", [")
+	# 		#datos = new_dict1.split('", "')
+	# 		print(new_dict1_list)
+	# 		#json.dump(new_dict1, partida_guardada_2)
+	# 	#print()
 
 	#_______________________
 	#						\ Cambiar turno \__________________________
@@ -661,13 +702,7 @@ Resistencia bloques:
 	#
 	dar_turno.place(x=160, y=500)
 	
-	# img_fo = Image.open("./semi_transparent.png")
-	# print(img_fo)
-	# resize_img = img_fo.resize((1700,900))
-	# imgFf = ImageTk.PhotoImage(resize_img)
-
-	# fondoJf = tk.Label(canva_juego, image = imgFf, bg="#000000")
-	# fondoJf.img_fo = imgFf
+	
 	turno = tk.Canvas(canva_juego, width=700, height=350, bg="#a2a2a2")
 	titulo_turno = tk.Label(turno, text='',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 	titulo_turno.place(relx=0.5, y=70, anchor=tk.CENTER )
@@ -688,10 +723,12 @@ Resistencia bloques:
 			area_juego.bind("<Button-1>", colocarBloques)
 		else:
 			ventanaPrincipal.bind("<Key>", manejar_evento_teclado)
+		
 		# fondoJf.place_forget()
 		# rect = canva_juego.create_rectangle(20, 50, 300, 100, outline="black", fill="red")
 		# canva_juego.tag_raise(rect)
 
+	
 
 	def turno_rol(jugador, funcion):
 		if len(bloques_colocados["aguila"][1]) <= 0 and jugador == "atacante":
@@ -707,7 +744,7 @@ Resistencia bloques:
 				child.configure(state=tk.DISABLED)
 			pausar_cronometro = True
 			funcion()
-
+		
 	def turno_defender():
 		global th
 
@@ -763,12 +800,6 @@ Resistencia bloques:
 			th = threading.Thread(target=cronometro)
 			th.start()
 		
-	
-	# Llama a la funcion para dar el turno al defensor justo despues de que se ingresó a la pantalla de juego
-	turno_rol("defensor", turno_defender)
-	
-
-
 	#_______________________
 	#						\ Usar control \__________________________
 
@@ -778,55 +809,77 @@ Resistencia bloques:
 
 
 	def loop_control():
-
-		while Rpi_reading :
+		global bomba_en_movimiento, tipo_bomba
+		while Rpi_reading:
 			if (Rpi.isOpen()):
+				#
 				dt=Rpi.readline() #Esto se recibe en bytes.
+				#print("si", dt)
 				Dt_s = dt.decode('UTF-8') #Conversión de Byte a String
-				print(Dt_s)
-				if "arriba" in Dt_s:
+				#print(Dt_s)
+				if "arriba" in Dt_s and not pausar_cronometro:
 					mover_tanque_con_joystick("arriba")
-				elif "abajo" in Dt_s:
+				elif "abajo" in Dt_s and not pausar_cronometro:
 					mover_tanque_con_joystick("abajo")
-				elif "izquierda" in Dt_s:
+				elif "izquierda" in Dt_s and not pausar_cronometro:
 					mover_tanque_con_joystick("izquierda")
-				elif "derecha" in Dt_s:
+				elif "derecha" in Dt_s and not pausar_cronometro:
 					mover_tanque_con_joystick("derecha")
 				else:
 					pass
 
-				global bomba_en_movimiento, tipo_bomba
-				if "agua" in Dt_s and not bomba_en_movimiento:
+				if "agua" in Dt_s and not bomba_en_movimiento and not pausar_cronometro and turno_atacante:
 					bomba_en_movimiento = True
 					tipo_bomba = "agua"
+					bombas_restantes[tipo_bomba][0] -= 1
+					bombas_restantes[tipo_bomba][3][0].configure(text=bombas_restantes[tipo_bomba][0])
 					animacion_disparo(direccion_tanque, bola_agua_image)
-				elif "fuego" in Dt_s and not bomba_en_movimiento:
+				elif "fuego" in Dt_s and not bomba_en_movimiento and not pausar_cronometro  and turno_atacante:
 					bomba_en_movimiento = True
 					tipo_bomba = "fuego"
+					bombas_restantes[tipo_bomba][0] -= 1
+					bombas_restantes[tipo_bomba][3][0].configure(text=bombas_restantes[tipo_bomba][0])
 					animacion_disparo(direccion_tanque, bola_fuego_image)
-				elif "bomba" in Dt_s and not bomba_en_movimiento:
+				elif "bomba" in Dt_s and not bomba_en_movimiento and not pausar_cronometro  and turno_atacante:
 					bomba_en_movimiento = True
 					tipo_bomba = "bomba"
+					bombas_restantes[tipo_bomba][0] -= 1
+					bombas_restantes[tipo_bomba][3][0].configure(text=bombas_restantes[tipo_bomba][0])
 					animacion_disparo(direccion_tanque, bomba_image)
 
-				# if (Dt_s[0]=="%"):
-				#     btn=(Dt_s[1:-1])
-				#     print (btn)
+				if "presionado" in Dt_s and not pausar_cronometro:
+					pausar_juego()
 					
-			#text_x = font.render('Datos X '+Rx, True, green, blue)
-			#text_y = font.render('Datos Y '+Ry, True, green, blue)
+				elif "presionado" in Dt_s and pausar_cronometro:
+					continuar_juego()
+					btn_aceptar.invoke()
+					
 
-			#display_surface.blit(text_x, textRect_x)
-			#display_surface.blit(text_y, textRect_y)
-			
-			# for event in pygame.event.get() :
-			#     if event.type == pygame.QUIT :
-			#         pygame.quit()
-			#         
-			#         quit() 
-			# pygame.display.update() 
+
+				# if len(Dt_s_pausar) <2:
+				# 	if "liberado" in Dt_s or "presionado" in Dt_s:
+				# 		Dt_s_pausar.append(Dt_s)
+				# else:
+				# 	if "liberado" in Dt_s or "presionado" in Dt_s:
+				# 		Dt_s_pausar.append(Dt_s)
+				# 		Dt_s_pausar.pop(0)
+				# print(Dt_s_pausar)
+				# if len(Dt_s_pausar) == 2 and "presionado" in Dt_s_pausar[0] and "liberado" in Dt_s_pausar[1]:
+				# 	if not juego_pausado:
+				# 		pausar_juego()
+				# 		juego_pausado = True
+				# 	else:
+				# 		continuar_juego()
+				# 		juego_pausado = False
+	
+	# Llama a la funcion para dar el turno al defensor justo despues de que se ingresó a la pantalla de juego
+	turno_rol("defensor", turno_defender)
+	
 	Rpi_thread = threading.Thread(target=loop_control)
 	Rpi_thread.start()
+
+
+	
 	#_______________________
 	#						\ Mover tanque \__________________________
 
@@ -878,48 +931,49 @@ Resistencia bloques:
 
 
 	def mover_tanque_con_joystick(direccion_joystick):
+
 		global x_tanque, y_tanque, direccion_tanque
+		if turno_atacante:
+			# Calcula las nuevas coordenadas del tanque según la dirección
+			nueva_x = x_tanque
+			nueva_y = y_tanque
 
-		# Calcula las nuevas coordenadas del tanque según la dirección
-		nueva_x = x_tanque
-		nueva_y = y_tanque
+			if direccion_joystick == "arriba" and y_tanque > 15:
+				nueva_y -= 10
+				direccion_tanque = 'up'
+			elif direccion_joystick == "izquierda" and x_tanque > 16:
+				nueva_x -= 10
+				direccion_tanque = 'left'
+			elif direccion_joystick == "abajo" and y_tanque < 585:
+				nueva_y += 10
+				direccion_tanque = 'down'
+			elif direccion_joystick == "derecha" and x_tanque < 586:
+				nueva_x += 10
+				direccion_tanque = 'right'
+			elif direccion_joystick == "nulo":
+				pass
 
-		if direccion_joystick == "arriba" and y_tanque > 15:
-			nueva_y -= 10
-			direccion_tanque = 'up'
-		elif direccion_joystick == "izquierda" and x_tanque > 16:
-			nueva_x -= 10
-			direccion_tanque = 'left'
-		elif direccion_joystick == "abajo" and y_tanque < 585:
-			nueva_y += 10
-			direccion_tanque = 'down'
-		elif direccion_joystick == "derecha" and x_tanque < 586:
-			nueva_x += 10
-			direccion_tanque = 'right'
-		elif direccion_joystick == "nulo":
-			pass
+			# Verifica la colisión con bloques colocados
+			colision = False
 
-		# Verifica la colisión con bloques colocados
-		colision = False
+			for elem in bloques_colocados:
+				for coords in bloques_colocados[elem][0]:
+					if (
+						nueva_x - 10< coords[0] + dim_cuadros["y2"] and
+						nueva_x + 10 > coords[0] and
+						nueva_y - 10< coords[1] + dim_cuadros["x2"] and
+						nueva_y + 10 > coords[1]
+					):
+						colision = True
+						break
 
-		for elem in bloques_colocados:
-			for coords in bloques_colocados[elem][0]:
-				if (
-					nueva_x - 10< coords[0] + dim_cuadros["y2"] and
-					nueva_x + 10 > coords[0] and
-					nueva_y - 10< coords[1] + dim_cuadros["x2"] and
-					nueva_y + 10 > coords[1]
-				):
-					colision = True
-					break
+			# Si no hay colisión, actualiza la posición del tanque
+			if not colision:
+				x_tanque = nueva_x
+				y_tanque = nueva_y
 
-		# Si no hay colisión, actualiza la posición del tanque
-		if not colision:
-			x_tanque = nueva_x
-			y_tanque = nueva_y
-
-		actualizar_imagen_tanque()
-		area_juego.coords(tanque, x_tanque, y_tanque)
+			actualizar_imagen_tanque()
+			area_juego.coords(tanque, x_tanque, y_tanque)
 
 
 	#_______________________
@@ -927,6 +981,7 @@ Resistencia bloques:
 
 	# Función para disparar
 	def animacion_disparo(direccion, imagen):
+	
 		frames = animacion_tanque[direccion]
 		for frame in frames:
 			area_juego.itemconfig(tanque, image=frame)

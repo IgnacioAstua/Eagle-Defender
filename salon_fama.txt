@@ -1,0 +1,5 @@
+5,Jugador 2,./imagenes/perfil_placeholder.png,./musica/winner_default.mp3
+12,Jugador 2,./imagenes/perfil_placeholder.png,./musica/winner_default.mp3
+25,Jugador 2,./imagenes/perfil_placeholder.png,./musica/winner_default.mp3
+30,usuario2,C:/Users/Joelb/Desktop/Joel/1-Descargas/bola_fuego(1).png,C:/Users/Joelb/Desktop/Joel/1-Descargas/doom-133866.mp3
+49,usuario2,C:/Users/Joelb/Desktop/Joel/1-Descargas/bola_fuego(1).png,C:/Users/Joelb/Desktop/Joel/1-Descargas/doom-133866.mp3

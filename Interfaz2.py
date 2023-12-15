@@ -8,6 +8,7 @@ import threading # funciones de la playlist de musica
 import time # sleep , Clock tick
 import random # playlist en orden aleatoria
 #import shutil #copiar canciones favoritas a carpeta "favoritas"
+import json
 #Ventana Pricipal
 ventana1 = tk.Tk()
 
@@ -29,10 +30,15 @@ def insert_into_playlist(playlist, music_file):
 	playlist.append(music_file)
 
 not_stopping = True
+sound = ""
+volumen = 0.8
 def play_playlist(channel, play_list, paused):
+	global sound
 	for music_file in play_list:
 		sound = pygame.mixer.Sound(music_file)
+		sound.set_volume(volumen)
 		channel.queue(sound)
+
 		while channel.get_busy() and not_stopping:
 			pygame.time.Clock().tick(10)
 
@@ -64,28 +70,6 @@ for songs in all_mp3:
 paused_music = threading.Event()
 
 start_playlist(playlist_channel, playList, paused_music)
-
-# # Your GUI or button handling code here
-# while True:
-#     # Simulate a button click to pause music, replace this with your actual button click event
-#     time.sleep(1)
-#     pause_music(playlist_channel)
-
-#     # Simulate a button click to resume music, replace this with your actual button click event
-#     time.sleep(1)
-#     resume_music(playlist_channel)
-
- 
-# Continue with the rest of your program
-# ...
-
-# Wait for the music thread to finish before exiting (optional)
-# music_thread.join()
-
-
-
-
-
 
 #Variables globales para rutas de archivos y nombres de usuario
 ruta_foto = ""
@@ -320,15 +304,15 @@ btn_registro.place(x=518, y=385)
 ajustes_canva = tk.Canvas(ventana1, width=664, height=465, bg='grey')
 musica_txt = tk.Label(ajustes_canva, text= 'Música', font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 musica_txt.place(relx=0.5, y=25, anchor=tk.N)
-mute = tk.Button(ajustes_canva, text='No', font= 'Fixedsys 20',bg='grey', fg='black')
+mute = tk.Button(ajustes_canva, text='No', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda:detener_musica())
 mute.place(x=400,y=80)
-unmute = tk.Button(ajustes_canva, text='Sí', font= 'Fixedsys 20',bg='grey', fg='black')
+unmute = tk.Button(ajustes_canva, text='Sí', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda:reanudar_musica())
 unmute.place(x=220, y=80)
 volumen_txt = tk.Label(ajustes_canva, text= 'Volumen', font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 volumen_txt.place(relx=0.5, y=175, anchor=tk.N)
-menos = tk.Button(ajustes_canva, text='-', font= 'Fixedsys 20',bg='grey', fg='black')
+menos = tk.Button(ajustes_canva, text='-', font= 'Fixedsys 20',bg='grey', fg='black' , command=lambda:bajar_volumen())
 menos.place(x=420,y=230)
-mas = tk.Button(ajustes_canva, text='+', font= 'Fixedsys 20',bg='grey', fg='black')
+mas = tk.Button(ajustes_canva, text='+', font= 'Fixedsys 20',bg='grey', fg='black', command=lambda:subir_volumen())
 mas.place(x=220, y=230)
 tiempo_turno = tk.Label(ajustes_canva, text= 'Tiempo por turno', font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 tiempo_turno.place(relx=0.5, y=325, anchor=tk.N)
@@ -337,6 +321,23 @@ slider_tiempo = tk.Scale(ajustes_canva, label="0", from_="1", to="180", width=20
 slider_tiempo.set(90)
 slider_tiempo.place(relx=0.5, y=380, anchor=tk.N)
 
+def detener_musica():
+	pygame.mixer.Channel(3).pause()
+
+def reanudar_musica():
+	pygame.mixer.Channel(3).unpause()
+
+def subir_volumen():
+	global volumen
+	if volumen < 1.0:
+		volumen +=0.1
+		sound.set_volume(volumen)
+
+def bajar_volumen():
+	global volumen
+	if volumen > 0.0:
+		volumen -=0.1
+		sound.set_volume(volumen)
 
 def tiempo_en_min(segundos):
 	if segundos%60//10 == 0 and segundos//60//10 == 0:
@@ -350,16 +351,13 @@ def tiempo_en_min(segundos):
 
 
 #Ventana salon de la fama
-salon_canva = tk.Canvas(ventana1, width=700, height=447)
-
-
-def exit_salon():
-	salon_canva.pack_forget()
-	pygame.mixer.Channel(0).stop()
-	pygame.mixer.Channel(3).unpause()
-
 def salon():
 
+	salon_canva = tk.Canvas(ventana1, width=700, height=447)
+	def exit_salon():
+		salon_canva.pack_forget()
+		pygame.mixer.Channel(0).stop()
+		pygame.mixer.Channel(3).unpause()
 	salon_canva.delete('all')
 
 	salon_canva.pack(side=tk.TOP, pady=100)
@@ -412,39 +410,50 @@ def salon():
 			name = tk.Label(salon_canva,  text=datos[1], font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
 			name.place(x=335, y=90 +70*(i))
 
-def salon_play(linea, i, play_btn):
-	if play_btn[i].cget("text") == "▷":
-		for play_btns in play_btn:
-			if play_btns.cget("text") == "||":
-				play_btns.configure(text="▷")
-		play_btn[i].configure(text="||")
-		datos = linea.strip().split(',')
-		pygame.mixer.init()
-		my_sound = pygame.mixer.Sound(datos[3])
-		pygame.mixer.Channel(0).play(my_sound)
-		my_sound.set_volume(0.7)
-		pygame.mixer.Channel(3).pause()
-	else:
-		pygame.mixer.Channel(3).unpause()
-		play_btn[i].configure(text="▷")
-		pygame.mixer.Channel(0).pause()
+		def salon_play(linea, i, play_btn):
+			if play_btn[i].cget("text") == "▷":
+				for play_btns in play_btn:
+					if play_btns.cget("text") == "||":
+						play_btns.configure(text="▷")
+				play_btn[i].configure(text="||")
+				datos = linea.strip().split(',')
+				pygame.mixer.init()
+				my_sound = pygame.mixer.Sound(datos[3])
+				pygame.mixer.Channel(0).play(my_sound)
+				my_sound.set_volume(0.7)
+				pygame.mixer.Channel(3).pause()
+			else:
+				pygame.mixer.Channel(3).unpause()
+				play_btn[i].configure(text="▷")
+				pygame.mixer.Channel(0).pause()
 
 #Ventana de ayuda
-text_controles = """Teclas:
+text_controles = """¿Cómo ganar? (según el rol)
+ - Atacante: derrivando el aguila antes de que finalice
+ el tiempo.
+ - Defensor: si el aguila no fue derribada por el 
+ atacante al finalizar el tiempo.
+Teclas:
  - W: mover tanque hacia arriba
  - A: mover tanque hacia la izquierda
  - S: mover tanque hacia abajo
  - D: mover tanque hacia la derecha
- - Espacio: disparar
-Resistencia bloques:
+ - J: disparar bolas de agua
+ - K: disparar bolas de fuego
+ - L: disparar bombas"""
+
+text_controles2 = """Resistencia bloques:
  - Concreto: 1 bomba, 2 bolas de fuego, 2 bolas de agua
  - Acero: 1 bomba, 1 bolas de fuego, 2 bolas de agua
  - Madera: 1 de cualquier tipo de poder
-¿Cómo ganar? (según el rol)
- - Atacante: derrivando el aguila antes de que finalice
- el tiempo.
- - Defensor: si el aguila no fue derribada por el 
- atacante al finalizar el tiempo."""
+Usando control:
+ - Joystick arriba: mover tanque hacia arriba
+ - Joystick izquierda: mover tanque hacia la izquierda
+ - Joystick abajo: mover tanque hacia abajo
+ - Joystick derecha: mover tanque hacia la derecha
+ - Botón 1: disparar bolas de agua
+ - Botón 2: disparar bolas de fuego
+ - Botón 3: disparar bombas"""
 
 
 
@@ -497,11 +506,104 @@ salon_fama.place(relx=0.5, y=525, anchor=tk.N)
 
 #Boton de ajustes
 ajust=tk.Button(canva1, text ="Ajustes", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: ajustes_canva.pack(side= tk.TOP, pady=50))
-ajust.place(relx=0.5, y=625, anchor=tk.N)
+ajust.place(relx=0.15, y=625, anchor=tk.N)
 salir_ajustes=tk.Button(ajustes_canva, text= 'Volver', font= 'Fixedsys 16', bg='grey',fg='black', command= lambda: ajustes_canva.pack_forget())
 salir_ajustes.place(x=10,y=10)
 
-def jijijija():
+#Boton partidas guardadas
+partidas_guardadas = tk.Button(canva1, text='Partidas guardadas', font= 'Fixedsys 25',bg='grey', fg='black', command= lambda: guardadas())
+partidas_guardadas.place(relx=0.5, y=625, anchor=tk.N)
+
+def guardadas():
+
+	guardadas_canva = tk.Canvas(ventana1, width=700, height=447)
+	guardadas_canva.delete('all')
+
+	guardadas_canva.pack(side=tk.TOP, pady=100)
+
+	
+	fondo_salon = tk.Label(guardadas_canva, image=fondo2)
+	fondo_salon.place(x=0, y=0)
+
+	guardadas_txt = tk.Label(guardadas_canva, text= 'Partidas guardadas(más nueva a más vieja)', font= 'Fixedsys 22',bg='grey', fg='black', relief='raised')
+	guardadas_txt.place(relx=0.5, y=70, anchor=tk.N)
+
+	salir_guardadas = tk.Button(guardadas_canva, text = "Volver", font = "Fixedsys 16",bg='grey', fg='black', command = lambda: guardadas_canva.pack_forget())
+	salir_guardadas.place(x=10, y=10)
+	with open('partida_guardada_3.json', 'r') as partida_guardada_3:
+		new_dict3 = json.load(partida_guardada_3)
+		prueba = tk.Button(guardadas_canva, text = "Partida 1", font = "Fixedsys 16",bg='grey', fg='black', command = lambda : set_punto_reanudacion(new_dict3))
+		prueba.place(x=20, y=140 +70*(0))
+	with open('partida_guardada_2.json', 'r') as partida_guardada_2:
+		new_dict2 = json.load(partida_guardada_2)
+		prueba = tk.Button(guardadas_canva, text = "Partida 2", font = "Fixedsys 16",bg='grey', fg='black', command = lambda : set_punto_reanudacion(new_dict2))
+		prueba.place(x=20, y=140 +70*(1))
+		#json.dump(new_dict2, partida_guardada_3)
+	with open('partida_guardada_1.json', 'r') as partida_guardada_1:
+		new_dict1 = json.load(partida_guardada_1)
+		prueba = tk.Button(guardadas_canva, text = "Partida 3", font = "Fixedsys 16",bg='grey', fg='black', command = lambda : set_punto_reanudacion(new_dict1))
+		prueba.place(x=20, y=140 +70*(2))
+
+	with open('partidas_guardadas.txt', 'r+') as partidas_guardadas:
+		lineas = partidas_guardadas.readlines()
+		play_btn = []
+		for i in range(len(lineas)):
+			datos = lineas[i].strip().split(',')
+
+			
+			# posicion = tk.Label(guardadas_canva,  text= f"{i + 1}." , width=2, font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
+			# posicion.place(x=20, y=90 +70*(i))
+
+			
+
+			# imgJ_salon = Image.open(datos[2])
+			# resize_imgJ_salon = imgJ_salon.resize((50,50))
+			# imgJ_salon = ImageTk.PhotoImage(resize_imgJ_salon)
+
+			# label_imgJ_salon = tk.Label(guardadas_canva, image = imgJ_salon, height=50, width=50, borderwidth=0, highlightthickness=0)
+			# label_imgJ_salon.imgJ_salon = imgJ_salon
+			# label_imgJ_salon.place(x=285, y=90 +70*(i))
+
+			# name = tk.Label(guardadas_canva,  text=datos[1], font= 'Fixedsys 25',bg='grey', fg='black', relief='raised')
+			# name.place(x=335, y=90 +70*(i))
+
+		def salon_play(linea, i, play_btn):
+			if play_btn[i].cget("text") == "▷":
+				for play_btns in play_btn:
+					if play_btns.cget("text") == "||":
+						play_btns.configure(text="▷")
+				play_btn[i].configure(text="||")
+				datos = linea.strip().split(',')
+				pygame.mixer.init()
+				my_sound = pygame.mixer.Sound(datos[3])
+				pygame.mixer.Channel(0).play(my_sound)
+				my_sound.set_volume(0.7)
+				pygame.mixer.Channel(3).pause()
+			else:
+				pygame.mixer.Channel(3).unpause()
+				play_btn[i].configure(text="▷")
+				pygame.mixer.Channel(0).pause()
+
+
+def set_punto_reanudacion(linea):
+	#for i in range(len(lineas)):
+	#datos_linea = linea.strip().split(',')
+	print(linea)
+	# canal = pygame.mixer
+	# canva1.place_forget()
+	# select_rol.pack_forget()
+	# rol = {"atacante":"", "defensor":""}
+	# if var_rol.get() == 0:
+	# 	rol["atacante"], rol["defensor"] = usr1[0], usr2[0]
+	# 	ventanaJuego(ventana1, usr2, usr1, rol, canva1, canal, slider_tiempo.get(), ventanas_de_ayuda, 
+	# 		text_controles, text_controles2, salon, )
+	# else:
+	# 	rol["atacante"], rol["defensor"] = usr2[0], usr1[0]
+	# 	ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal, slider_tiempo.get(), ventanas_de_ayuda, 
+	# 		text_controles, text_controles2, salon, )
+
+
+def ventanas_de_ayuda(text1, text2):
 
 	ayuda = tk.Canvas(ventana1, width=900, height=563)
 	ayuda.pack(side= tk.TOP, pady=50)
@@ -509,9 +611,9 @@ def jijijija():
 	fondo_ayuda.place(x=0, y=0)
 	titulo_ayuda = tk.Label(ayuda, text='Controles de juego:',font= 'Fixedsys 25', bg='grey', fg='black', relief= 'raised')
 	titulo_ayuda.place(relx=0.5, y=30, anchor=tk.CENTER)
-	controles = tk.Label(ayuda, text=text_controles, height=15, width=55, font= 'Fixedsys 17', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
+	controles = tk.Label(ayuda, text=text1, height=15, width=55, font= 'Fixedsys 17', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
 	controles.place(relx=0.5, y=70, anchor=tk.N)
-	controles2 = tk.Label(ayuda, text="yes", height=15, width=55, font= 'Fixedsys 17', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
+	controles2 = tk.Label(ayuda, text=text2, height=15, width=55, font= 'Fixedsys 17', justify=tk.LEFT, bg='grey', fg='black', relief= 'raised')
 	controles2.place(relx=0.5, y=700, anchor=tk.N)
 	btn_previous = tk.Button(ayuda, text= 'Anterior', font= 'Fixedsys 16', bg='grey',fg='black', state=tk.DISABLED, command= lambda: siguiente_pag_controles(0, "previous"))
 	btn_previous.place(relx=0.5, y=545, anchor=tk.E)
@@ -545,7 +647,7 @@ def jijijija():
 	salir_ayuda.place(x=10,y=10)
 
 #Boton de ayuda
-ayud = tk.Button(canva1, text ="Ayuda", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: jijijija())
+ayud = tk.Button(canva1, text ="Ayuda", font ="Fixedsys 25", bg='grey', fg='black', command= lambda: ventanas_de_ayuda(text_controles, text_controles2))
 ayud.place(relx=0.85, y=625, anchor=tk.N)
 
 #para que al salir de la ventana de ayuda regrese a la primera pagina de la misma
@@ -638,16 +740,19 @@ def jugar():
 	rol = {"atacante":"", "defensor":""}
 	if var_rol.get() == 0:
 		rol["atacante"], rol["defensor"] = usr1[0], usr2[0]
-		ventanaJuego(ventana1, usr2, usr1, rol, canva1, canal)
+		ventanaJuego(ventana1, usr2, usr1, rol, canva1, canal, slider_tiempo.get(), ventanas_de_ayuda, 
+			text_controles, text_controles2, salon )
 	else:
 		rol["atacante"], rol["defensor"] = usr2[0], usr1[0]
-		ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal, slider_tiempo.get())
+		ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal, slider_tiempo.get(), ventanas_de_ayuda, 
+			text_controles, text_controles2, salon )
 
 def jugar_rapido():
 	canal = pygame.mixer
 	canva1.place_forget()
 	rol = {"atacante":"Jugador 1", "defensor":"Jugador 2"}
-	ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal, slider_tiempo.get())
+	ventanaJuego(ventana1, usr1, usr2, rol, canva1, canal, slider_tiempo.get(), ventanas_de_ayuda, text_controles, 
+		text_controles2, salon )#,linea, i, play_btn
 
 
 
